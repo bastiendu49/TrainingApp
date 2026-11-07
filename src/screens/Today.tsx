@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { formatDuration, formatTarget } from '../domain/format'
+import { sortedHistory, type WorkoutLog } from '../domain/log'
 import { nextSession, weekDays } from '../domain/schedule'
+import type { ActiveSession } from '../domain/session'
 import type { Program } from '../domain/types'
 import { IconChevron } from '../lib/icons'
 
@@ -8,15 +10,18 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 type Props = {
   program: Program
+  history: WorkoutLog[]
+  active: ActiveSession | null
   onOpenSession: (sessionId: string) => void
+  onStart: (sessionId: string) => void
+  onResume: () => void
 }
 
 /** Accueil : la séance proposée aujourd'hui, ses trois parties et le bouton pour la lancer. */
-export function Today({ program, onOpenSession }: Props) {
+export function Today({ program, history, active, onOpenSession, onStart, onResume }: Props) {
   const [now] = useState(() => new Date())
-  // ponytail: sans historique, la séance proposée est toujours la première ; l'étape 2
-  // passera ici l'identifiant de la dernière séance faite.
-  const suggested = nextSession(program.sessions)
+  const sorted = sortedHistory(history)
+  const suggested = nextSession(program.sessions, sorted[0]?.sessionId)
   const [chosenId, setChosenId] = useState(suggested.id)
   const session = program.sessions.find((s) => s.id === chosenId) ?? suggested
   const index = program.sessions.indexOf(session)
@@ -28,6 +33,7 @@ export function Today({ program, onOpenSession }: Props) {
 
   const date = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
   const todayKey = now.toDateString()
+  const doneDays = new Set(history.map((l) => new Date(l.startedAt).toDateString()))
 
   return (
     <main className="screen">
@@ -41,12 +47,27 @@ export function Today({ program, onOpenSession }: Props) {
       </header>
 
       <div className="week" aria-label="Semaine en cours">
-        {weekDays(now).map((d, i) => (
-          <span key={d.toISOString()} className={d.toDateString() === todayKey ? 'day today' : 'day'}>
-            {DAY_LETTERS[i]}
-          </span>
-        ))}
+        {weekDays(now).map((d, i) => {
+          const key = d.toDateString()
+          const cls = ['day', key === todayKey ? 'today' : '', doneDays.has(key) ? 'done' : ''].join(' ').trim()
+          return (
+            <span key={key} className={cls} aria-label={doneDays.has(key) ? `${DAY_LETTERS[i]} : séance faite` : undefined}>
+              {DAY_LETTERS[i]}
+            </span>
+          )
+        })}
       </div>
+
+      {active && (
+        <button className="resume" onClick={onResume}>
+          <span className="ring-icon circ" aria-hidden="true" />
+          <span>
+            <span className="kicker">Séance en cours</span>
+            <span className="block-title">{active.log.sessionName}</span>
+          </span>
+          <span className="resume-go">Reprendre</span>
+        </button>
+      )}
 
       <div className="blocks">
         {warmup && (
@@ -92,12 +113,11 @@ export function Today({ program, onOpenSession }: Props) {
         Voir le détail de la séance <IconChevron size={18} />
       </button>
 
-      <div className="start">
-        <button className="cta" disabled>
+      {!active && (
+        <button className="cta" onClick={() => onStart(session.id)}>
           Démarrer la séance
         </button>
-        <p className="muted small center">La séance guidée arrive à la prochaine étape.</p>
-      </div>
+      )}
 
       <section className="other">
         <p className="kicker plain">Faire une autre séance</p>

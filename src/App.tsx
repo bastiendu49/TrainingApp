@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import type { WorkoutLog } from './domain/log'
 import { INITIAL_PROGRAM } from './domain/program'
+import { startSession, type ActiveSession } from './domain/session'
 import { usePersisted } from './domain/store'
 import type { Program } from './domain/types'
+import { unlockAudio } from './lib/audio'
 import { IconBody, IconChart, IconMore, IconRings } from './lib/icons'
 import { ComingSoon } from './screens/ComingSoon'
+import { Guided } from './screens/Guided'
 import { SessionDetail } from './screens/SessionDetail'
 import { Today } from './screens/Today'
 
@@ -22,9 +26,13 @@ export default function App() {
   // ouverture de l'app : rien ne se recharge pendant une séance.
   useRegisterSW()
 
-  const [program, , store] = usePersisted<Program>('program', INITIAL_PROGRAM)
+  const [program, , programStore] = usePersisted<Program>('program', INITIAL_PROGRAM)
+  const [history, setHistory, historyStore] = usePersisted<WorkoutLog[]>('history', [])
+  // La séance en cours est enregistrée à chaque action : fermer l'app ne la perd pas.
+  const [active, setActive, activeStore] = usePersisted<ActiveSession | null>('active', null)
   const [tab, setTab] = useState<Tab>('seance')
   const [openSession, setOpenSession] = useState<string | null>(null)
+  const [guided, setGuided] = useState(true)
 
   // Le bouton retour d'Android ferme le détail au lieu de quitter l'app.
   useEffect(() => {
@@ -39,21 +47,56 @@ export default function App() {
   }, [])
   const close = useCallback(() => window.history.back(), [])
 
-  if (store.error) {
+  const update = useCallback((fn: (a: ActiveSession) => ActiveSession) => setActive((a) => (a ? fn(a) : a)), [setActive])
+
+  const error = programStore.error ?? historyStore.error ?? activeStore.error
+  if (error) {
     return (
       <main className="screen">
-        <p className="error">{store.error}</p>
+        <p className="error">{error}</p>
       </main>
     )
   }
-  if (!store.loaded) return null
+  if (!programStore.loaded || !historyStore.loaded || !activeStore.loaded) return null
+
+  if (active && guided && tab === 'seance') {
+    return (
+      <Guided
+        program={program}
+        history={history}
+        active={active}
+        update={update}
+        onSave={(log) => {
+          setHistory((h) => [...h.filter((l) => l.id !== log.id), log])
+          setActive(null)
+          window.scrollTo(0, 0)
+        }}
+        onAbort={() => setActive(null)}
+        onMinimize={() => setGuided(false)}
+      />
+    )
+  }
 
   let content: React.ReactNode
   if (tab === 'seance') {
     content = openSession ? (
       <SessionDetail program={program} sessionId={openSession} onBack={close} />
     ) : (
-      <Today program={program} onOpenSession={open} />
+      <Today
+        program={program}
+        history={history}
+        active={active}
+        onOpenSession={open}
+        onStart={(id) => {
+          unlockAudio()
+          setActive(startSession(program, id, Date.now()))
+          setGuided(true)
+        }}
+        onResume={() => {
+          unlockAudio()
+          setGuided(true)
+        }}
+      />
     )
   } else if (tab === 'suivi') {
     content = <ComingSoon title="Suivi" text="Historique, fiches d’exercices avec tes records et tes courbes, calendrier et bilan mensuel : étapes 4 et 6." />
