@@ -9,8 +9,9 @@ import { usePersisted } from './domain/store'
 import { unlockAudio } from './lib/audio'
 import { IconBody, IconChart, IconMore, IconRings } from './lib/icons'
 import { useSync } from './lib/sync'
-import { ComingSoon } from './screens/ComingSoon'
+import { Body } from './screens/Body'
 import { Guided } from './screens/Guided'
+import { CalendarView, MonthlyReportView } from './screens/Monthly'
 import { Suggestions, Techniques } from './screens/Progression'
 import { SessionDetail } from './screens/SessionDetail'
 import { Settings } from './screens/Settings'
@@ -134,6 +135,8 @@ export default function App() {
         onSaveLog={app.saveLog}
         onDeleteLog={app.deleteLog}
         extraSections={[
+          { id: 'calendrier', label: 'Calendrier', render: (open) => <CalendarView program={program} history={history} open={open} /> },
+          { id: 'bilan', label: 'Bilan', render: (open) => <MonthlyReportView program={program} history={history} body={app.data.body} open={open} /> },
           {
             id: 'techniques',
             label: 'Techniques',
@@ -143,7 +146,7 @@ export default function App() {
       />
     )
   } else if (tab === 'corps') {
-    content = <ComingSoon title="Corps" text="Poids et mensurations avec leurs courbes : étape 6." />
+    content = <Body body={app.data.body} onSave={app.saveBody} onDelete={app.deleteBody} />
   } else {
     content = (
       <Settings

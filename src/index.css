@@ -102,6 +102,8 @@ p {
 
 .screen {
   display: grid;
+  /* minmax(0, 1fr) : un enfant trop large défile chez lui au lieu d'élargir tout l'écran. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   max-width: 560px;
   margin: 0 auto;
@@ -770,19 +772,23 @@ h2 {
 
 .segmented {
   display: flex;
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 2px;
   padding: 4px;
   border-radius: 14px;
   background: var(--soft);
 }
 
 .segmented button {
-  flex: 1;
+  flex: 1 0 auto;
   min-height: 40px;
+  padding: 0 6px;
   border: 0;
   border-radius: 10px;
   background: none;
+  font-size: 0.82rem;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--muted);
 }
 
@@ -950,4 +956,129 @@ h2 {
 .ladder li.now {
   color: var(--ink);
   font-weight: 700;
+}
+
+/* ---------- calendrier, bilan, corps ---------- */
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-nav .icon-btn {
+  font-size: 1.6rem;
+  color: var(--accent);
+}
+
+.month-nav .icon-btn:disabled {
+  color: var(--line);
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cal-head {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cal-day {
+  display: grid;
+  place-content: center;
+  aspect-ratio: 1;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  background: none;
+  font-size: 0.85rem;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.cal-day.today {
+  border-color: var(--line);
+}
+
+.cal-day.done {
+  border-color: var(--c);
+  font-weight: 700;
+}
+
+.cal-day small {
+  font-size: 0.6rem;
+  color: var(--ct, var(--muted));
+}
+
+.accent {
+  --c: var(--accent);
+  --ct: var(--accent);
+}
+
+.ink {
+  --c: var(--ink);
+  --ct: var(--ink);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.legend-item::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border: 3px solid var(--c);
+  border-radius: 50%;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.delta {
+  min-width: 2.6rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.delta.up {
+  background: var(--tech);
+  color: var(--surface);
+}
+
+.delta.down {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.summary-tiles div > span.small:last-child:not(.muted) {
+  color: var(--muted);
+}
+
+.body-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
