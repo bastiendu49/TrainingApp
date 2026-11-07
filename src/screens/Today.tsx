@@ -15,10 +15,12 @@ type Props = {
   onOpenSession: (sessionId: string) => void
   onStart: (sessionId: string) => void
   onResume: () => void
+  /** Propositions de progression, affichées sous la semaine. */
+  suggestions?: React.ReactNode
 }
 
 /** Accueil : la séance proposée aujourd'hui, ses trois parties et le bouton pour la lancer. */
-export function Today({ program, history, active, onOpenSession, onStart, onResume }: Props) {
+export function Today({ program, history, active, onOpenSession, onStart, onResume, suggestions }: Props) {
   const [now] = useState(() => new Date())
   const sorted = sortedHistory(history)
   const suggested = nextSession(program.sessions, sorted[0]?.sessionId)
@@ -118,6 +120,8 @@ export function Today({ program, history, active, onOpenSession, onStart, onResu
           Démarrer la séance
         </button>
       )}
+
+      {suggestions}
 
       <section className="other">
         <p className="kicker plain">Faire une autre séance</p>

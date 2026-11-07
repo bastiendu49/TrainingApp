@@ -72,6 +72,8 @@ export interface Skill {
   levels: SkillLevel[]
   /** Index du niveau travaillé actuellement dans `levels`. */
   currentLevel: number
+  /** Changements de niveau (validation ou retour en arrière), avec leur date. */
+  levelHistory?: { level: number; at: number }[]
 }
 
 export interface Session {

@@ -3,6 +3,7 @@ import { useRegisterSW } from 'virtual:pwa-register/react'
 import { buildNotebookHistory } from './data/notebook'
 import { useAppData } from './domain/appData'
 import { mergeData } from './domain/backup'
+import { applySuggestion, computeSuggestions, setSkillLevel } from './domain/progression'
 import { startSession, type ActiveSession } from './domain/session'
 import { usePersisted } from './domain/store'
 import { unlockAudio } from './lib/audio'
@@ -10,6 +11,7 @@ import { IconBody, IconChart, IconMore, IconRings } from './lib/icons'
 import { useSync } from './lib/sync'
 import { ComingSoon } from './screens/ComingSoon'
 import { Guided } from './screens/Guided'
+import { Suggestions, Techniques } from './screens/Progression'
 import { SessionDetail } from './screens/SessionDetail'
 import { Settings } from './screens/Settings'
 import { Suivi } from './screens/Suivi'
@@ -24,7 +26,7 @@ const TABS: { id: Tab; label: string; Icon: (p: { size?: number }) => React.Reac
   { id: 'plus', label: 'Plus', Icon: IconMore },
 ]
 
-type AppSettings = { syncCode?: string; lastSyncAt?: number; notebookImported?: boolean }
+type AppSettings = { syncCode?: string; lastSyncAt?: number; notebookImported?: boolean; dismissed?: string[] }
 
 export default function App() {
   // Enregistre le service worker (hors ligne). Une nouvelle version attend la prochaine
@@ -114,10 +116,32 @@ export default function App() {
           unlockAudio()
           setGuided(true)
         }}
+        suggestions={
+          <Suggestions
+            program={program}
+            suggestions={computeSuggestions(program, history).filter((s) => !settings.dismissed?.includes(s.key))}
+            onApply={(s, toKg) => app.updateProgram((p) => applySuggestion(p, s, Date.now(), toKg))}
+            onDismiss={(key) => setSettings((st) => ({ ...st, dismissed: [...(st.dismissed ?? []), key] }))}
+          />
+        }
       />
     )
   } else if (tab === 'suivi') {
-    content = <Suivi program={program} history={history} onSaveLog={app.saveLog} onDeleteLog={app.deleteLog} />
+    content = (
+      <Suivi
+        program={program}
+        history={history}
+        onSaveLog={app.saveLog}
+        onDeleteLog={app.deleteLog}
+        extraSections={[
+          {
+            id: 'techniques',
+            label: 'Techniques',
+            render: () => <Techniques program={program} onSetLevel={(skillId, level) => app.updateProgram((p) => setSkillLevel(p, skillId, level, Date.now()))} />,
+          },
+        ]}
+      />
+    )
   } else if (tab === 'corps') {
     content = <ComingSoon title="Corps" text="Poids et mensurations avec leurs courbes : étape 6." />
   } else {
