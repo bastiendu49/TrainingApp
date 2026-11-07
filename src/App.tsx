@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
-import type { WorkoutLog } from './domain/log'
-import { INITIAL_PROGRAM } from './domain/program'
+import { useAppData } from './domain/appData'
+import { mergeData } from './domain/backup'
 import { startSession, type ActiveSession } from './domain/session'
 import { usePersisted } from './domain/store'
-import type { Program } from './domain/types'
 import { unlockAudio } from './lib/audio'
 import { IconBody, IconChart, IconMore, IconRings } from './lib/icons'
+import { useSync } from './lib/sync'
 import { ComingSoon } from './screens/ComingSoon'
 import { Guided } from './screens/Guided'
 import { SessionDetail } from './screens/SessionDetail'
+import { Settings } from './screens/Settings'
 import { Today } from './screens/Today'
 
 type Tab = 'seance' | 'suivi' | 'corps' | 'plus'
@@ -21,18 +22,25 @@ const TABS: { id: Tab; label: string; Icon: (p: { size?: number }) => React.Reac
   { id: 'plus', label: 'Plus', Icon: IconMore },
 ]
 
+type AppSettings = { syncCode?: string; lastSyncAt?: number }
+
 export default function App() {
   // Enregistre le service worker (hors ligne). Une nouvelle version attend la prochaine
   // ouverture de l'app : rien ne se recharge pendant une séance.
   useRegisterSW()
 
-  const [program, , programStore] = usePersisted<Program>('program', INITIAL_PROGRAM)
-  const [history, setHistory, historyStore] = usePersisted<WorkoutLog[]>('history', [])
+  const app = useAppData()
+  const { program, history } = app.data
   // La séance en cours est enregistrée à chaque action : fermer l'app ne la perd pas.
   const [active, setActive, activeStore] = usePersisted<ActiveSession | null>('active', null)
+  const [settings, setSettings, settingsStore] = usePersisted<AppSettings>('settings', {})
   const [tab, setTab] = useState<Tab>('seance')
   const [openSession, setOpenSession] = useState<string | null>(null)
   const [guided, setGuided] = useState(true)
+
+  const loaded = app.loaded && activeStore.loaded && settingsStore.loaded
+  const onSynced = useCallback((at: number) => setSettings((s) => ({ ...s, lastSyncAt: at })), [setSettings])
+  const sync = useSync(loaded, app.data, app.replace, settings.syncCode, onSynced)
 
   // Le bouton retour d'Android ferme le détail au lieu de quitter l'app.
   useEffect(() => {
@@ -49,7 +57,7 @@ export default function App() {
 
   const update = useCallback((fn: (a: ActiveSession) => ActiveSession) => setActive((a) => (a ? fn(a) : a)), [setActive])
 
-  const error = programStore.error ?? historyStore.error ?? activeStore.error
+  const error = app.error ?? activeStore.error ?? settingsStore.error
   if (error) {
     return (
       <main className="screen">
@@ -57,7 +65,7 @@ export default function App() {
       </main>
     )
   }
-  if (!programStore.loaded || !historyStore.loaded || !activeStore.loaded) return null
+  if (!loaded) return null
 
   if (active && guided && tab === 'seance') {
     return (
@@ -67,7 +75,7 @@ export default function App() {
         active={active}
         update={update}
         onSave={(log) => {
-          setHistory((h) => [...h.filter((l) => l.id !== log.id), log])
+          app.saveLog(log)
           setActive(null)
           window.scrollTo(0, 0)
         }}
@@ -103,7 +111,17 @@ export default function App() {
   } else if (tab === 'corps') {
     content = <ComingSoon title="Corps" text="Poids et mensurations avec leurs courbes : étape 6." />
   } else {
-    content = <ComingSoon title="Plus" text="Sauvegarde en ligne (étape 3), puis modification du programme et des échauffements (étape 7)." />
+    content = (
+      <Settings
+        data={app.data}
+        code={settings.syncCode}
+        lastSyncAt={settings.lastSyncAt}
+        status={sync.status}
+        onSetCode={(syncCode) => setSettings((s) => ({ ...s, syncCode, lastSyncAt: syncCode ? s.lastSyncAt : undefined }))}
+        onSyncNow={() => void sync.sync()}
+        onImport={(d) => app.replace(mergeData(app.data, d))}
+      />
+    )
   }
 
   return (
