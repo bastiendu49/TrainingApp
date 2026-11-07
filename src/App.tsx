@@ -9,8 +9,10 @@ import { usePersisted } from './domain/store'
 import { unlockAudio } from './lib/audio'
 import { IconBody, IconChart, IconMore, IconRings } from './lib/icons'
 import { useSync } from './lib/sync'
+import { useNavStack } from './lib/useNavStack'
 import { Body } from './screens/Body'
 import { Guided } from './screens/Guided'
+import { ProgramEditor } from './screens/ProgramEditor'
 import { CalendarView, MonthlyReportView } from './screens/Monthly'
 import { Suggestions, Techniques } from './screens/Progression'
 import { SessionDetail } from './screens/SessionDetail'
@@ -42,6 +44,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('seance')
   const [openSession, setOpenSession] = useState<string | null>(null)
   const [guided, setGuided] = useState(true)
+  const plusNav = useNavStack<'program'>()
 
   const loaded = app.loaded && activeStore.loaded && settingsStore.loaded
   const onSynced = useCallback((at: number) => setSettings((s) => ({ ...s, lastSyncAt: at })), [setSettings])
@@ -85,6 +88,7 @@ export default function App() {
       <Guided
         program={program}
         history={history}
+        photos={app.data.photos}
         active={active}
         update={update}
         onSave={(log) => {
@@ -134,6 +138,11 @@ export default function App() {
         history={history}
         onSaveLog={app.saveLog}
         onDeleteLog={app.deleteLog}
+        photos={app.data.photos}
+        onSetPhoto={app.setPhoto}
+        onSetIllustration={(id, illustration) =>
+          app.updateProgram((p) => ({ ...p, exercises: { ...p.exercises, [id]: { ...p.exercises[id], illustration } } }))
+        }
         extraSections={[
           { id: 'calendrier', label: 'Calendrier', render: (open) => <CalendarView program={program} history={history} open={open} /> },
           { id: 'bilan', label: 'Bilan', render: (open) => <MonthlyReportView program={program} history={history} body={app.data.body} open={open} /> },
@@ -148,7 +157,9 @@ export default function App() {
   } else if (tab === 'corps') {
     content = <Body body={app.data.body} onSave={app.saveBody} onDelete={app.deleteBody} />
   } else {
-    content = (
+    content = plusNav.view === 'program' ? (
+      <ProgramEditor program={program} change={app.updateProgram} onBack={plusNav.back} />
+    ) : (
       <Settings
         data={app.data}
         code={settings.syncCode}
@@ -157,6 +168,7 @@ export default function App() {
         onSetCode={(syncCode) => setSettings((s) => ({ ...s, syncCode, lastSyncAt: syncCode ? s.lastSyncAt : undefined }))}
         onSyncNow={() => void sync.sync()}
         onImport={(d) => app.replace(mergeData(app.data, d))}
+        onEditProgram={() => plusNav.push('program')}
       />
     )
   }

@@ -16,6 +16,10 @@ export interface Exercise {
   id: string
   name: string
   kind: ExerciseKind
+  /** Illustration choisie sur la fiche ; absent ou « auto » : photo, sinon image libre, sinon pictogramme. */
+  illustration?: 'auto' | 'free' | 'picto' | 'photo'
+  /** Consignes saisies dans l'app (exercice créé par l'utilisateur). */
+  instructions?: string
 }
 
 /** Objectif d'une série. `loadKg` > 0 = lesté, absent = poids du corps. */

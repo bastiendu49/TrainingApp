@@ -185,8 +185,8 @@ Historique complet des circuits : voir les photos du livre (séries notées XX/X
 
 ---
 
-## Plan de construction (à valider)
-Chaque étape donne une version utilisable sur le téléphone.
+## Plan de construction ✅ (V1 construite)
+Chaque étape donne une version utilisable sur le téléphone. Étapes 0 et 1 sur `main` ; étapes 2 à 7 développées sur la branche `developpement` (un commit par étape) puis fusionnées.
 0. **Mise en place** : projet (même base que meal-app), dépôt GitHub `training-app`, site Netlify, icône. Résultat : une app vide installable sur Android.
 1. **Programme et données** : modèle de données, programme pré-rempli (4 séances, échauffements, technique, circuits, temps de repos), stockage sur le téléphone.
 2. **Séance guidée** : checklist d'échauffement, technique, circuits, enchaînement automatique, chronos, repos, bip sur les 3 dernières secondes, écran allumé, ressenti par tour, commentaire, résumé. Premier vrai test en séance.
@@ -195,3 +195,25 @@ Chaque étape donne une version utilisable sur le téléphone.
 5. **Progression** : échelles de niveaux de technique, propositions de progression, tractions lestées.
 6. **Suivi** : calendrier, bilan mensuel, poids et mensurations.
 7. **Illustrations et finitions** : images libres, pictogrammes de secours, tes photos, édition du programme et des échauffements.
+
+---
+
+## Choix faits pendant la construction
+- **Séance proposée** : elle suit l'ordre du programme (Push → Pull A → Jambes → Épaules), pas le jour de la semaine. Une séance décalée ne casse donc pas le cycle, et l'accueil permet de choisir une autre séance.
+- **Exercice en durée** : le chrono démarre seul juste après un repos. Sinon, 5 s de préparation (affichées en ambre, avec un bouton « Démarrer maintenant »). « Stop » enregistre le temps tenu.
+- **Ressenti** : noté pendant le repos entre les tours. Pour le dernier tour, sur un écran dédié. Il est facultatif.
+- **Historique du carnet** : 27 séances ajoutées au premier lancement, avec des dates fixes (les plus récentes la semaine du 2 novembre 2026) et des identifiants fixes. Pas de doublon d'un appareil à l'autre, et une séance supprimée ne revient pas.
+- **Propositions de progression** :
+  - +1 rep ou +5 s quand l'objectif est atteint sur tous les tours 2 séances de suite ;
+  - niveau de technique suivant selon la même règle ;
+  - lest des tractions lestées dès qu'une séance atteint 4 × 5, avec un palier au choix (+2,5 kg proposé).
+  - Une proposition ignorée ne revient pas tant que l'objectif ne change pas.
+- **Images libres retenues (7)** : dessins de la base wger sous licence CC-BY-SA, crédités dans Plus › Crédits.
+  - Exclues : les fentes (filigrane d'un site commercial), ainsi que les mollets, les tractions australiennes et épaule à épaule (style de banque d'images commerciale, origine douteuse).
+  - Les autres exercices ont un pictogramme. Chaque fiche permet de choisir son illustration ou d'ajouter sa photo (compressée, environ 10 à 60 Ko, sauvegardée avec le reste).
+- **Synchro** : 1 lecture à l'ouverture de l'app. Après une modification : 1 lecture + 1 envoi, 4 s plus tard. Rien n'est envoyé si les deux copies sont identiques.
+
+## Mise en service de la sauvegarde en ligne
+1. Netlify → le projet → Project configuration → Environment variables → Add a variable : clé `SYNC_CODE`, valeur = un code secret de ton choix (long, sans espace).
+2. Relancer un déploiement (Deploys → Trigger deploy) pour que la fonction prenne le code en compte.
+3. Dans l'app : Plus → Sauvegarde en ligne → saisir le même code → « Activer la sauvegarde ».

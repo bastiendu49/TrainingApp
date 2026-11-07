@@ -16,4 +16,14 @@ npm run build    # version de production (dossier dist)
 npm run icons    # régénère les icônes
 ```
 
-Déploiement : chaque push sur `main` est publié automatiquement par Netlify.
+Déploiement : chaque push sur `main` est publié automatiquement par Netlify (développer sur une autre branche pour économiser les crédits).
+
+## Sauvegarde en ligne
+
+La fonction `netlify/functions/sync.mts` garde une copie des données dans Netlify Blobs. Elle exige la variable
+d'environnement `SYNC_CODE` (réglages Netlify), à saisir aussi dans l'app (Plus › Sauvegarde en ligne).
+
+## Crédits
+
+Police Outfit (licence OFL). Images d'exercices de la base [wger](https://wger.de) sous licence CC-BY-SA, détaillées dans
+l'app (Plus › Crédits des images) et dans `src/data/exerciseInfo.ts`.

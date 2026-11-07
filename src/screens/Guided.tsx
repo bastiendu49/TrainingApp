@@ -19,6 +19,9 @@ import {
   type Timer,
 } from '../domain/session'
 import type { Program } from '../domain/types'
+import { EXERCISE_INFO } from '../data/exerciseInfo'
+import type { Photo } from '../domain/backup'
+import { Illustration } from '../lib/Illustration'
 import { go, tick, unlockAudio } from '../lib/audio'
 import { formatClock } from '../lib/time'
 import { useWakeLock } from '../lib/useWakeLock'
@@ -28,6 +31,7 @@ type Update = (fn: (a: ActiveSession) => ActiveSession) => void
 type Props = {
   program: Program
   history: WorkoutLog[]
+  photos: Record<string, Photo>
   active: ActiveSession
   update: Update
   onSave: (log: WorkoutLog) => void
@@ -37,7 +41,7 @@ type Props = {
 }
 
 /** La séance guidée : tout s'enchaîne seul, il suffit de valider chaque exercice. */
-export function Guided({ program, history, active, update, onSave, onAbort, onMinimize }: Props) {
+export function Guided({ program, history, photos, active, update, onSave, onAbort, onMinimize }: Props) {
   useWakeLock()
   const [now, setNow] = useState(() => Date.now())
   const [menu, setMenu] = useState(false)
@@ -136,7 +140,7 @@ export function Guided({ program, history, active, update, onSave, onAbort, onMi
 
       {step.kind === 'warmup' && <WarmupStep program={program} active={active} act={act} />}
       {step.kind === 'exercise' && (
-        <ExerciseStep key={active.index} program={program} history={history} active={active} step={step} now={now} act={act} />
+        <ExerciseStep key={active.index} program={program} history={history} photos={photos} active={active} step={step} now={now} act={act} />
       )}
       {step.kind === 'rest' && <RestStep key={active.index} program={program} history={history} active={active} step={step} now={now} act={act} />}
       {step.kind === 'rating' && <RatingStep active={active} step={step} act={act} />}
@@ -193,7 +197,7 @@ function lastLine(history: WorkoutLog[], exerciseId: string, before: number, tim
   return `Dernière fois : ${formatResults(last.exercise.results, timed ? 's' : 'reps')}${rating ? ` — ressenti ${rating}/5` : ''}`
 }
 
-function ExerciseStep({ program, history, active, step, now, act }: StepProps<'exercise'>) {
+function ExerciseStep({ program, history, photos, active, step, now, act }: StepProps<'exercise'> & { photos: Record<string, Photo> }) {
   const ex = active.log.exercises[step.ex]
   const exercise = program.exercises[ex.exerciseId]
   const timed = (ex.target.seconds ?? 0) > 0
@@ -203,6 +207,8 @@ function ExerciseStep({ program, history, active, step, now, act }: StepProps<'e
   const upcoming = upcomingExercise(active)
   const timer = active.timer
   const last = lastLine(history, ex.exerciseId, active.log.startedAt, timed)
+  const instructions = exercise.instructions ?? EXERCISE_INFO[exercise.id]?.instructions
+  const [showHelp, setShowHelp] = useState(false)
 
   return (
     <main className="step">
@@ -210,7 +216,16 @@ function ExerciseStep({ program, history, active, step, now, act }: StepProps<'e
         <span>{step.title}</span>
         <span>{step.position}</span>
       </div>
+      <Illustration exercise={exercise} photo={photos[exercise.id]} compact />
       <h1 className="ex-name">{exercise.name}</h1>
+      {instructions && (
+        <>
+          <button className="text-btn left" aria-expanded={showHelp} onClick={() => setShowHelp((v) => !v)}>
+            {showHelp ? 'Masquer les consignes' : 'Consignes'}
+          </button>
+          {showHelp && <p className="help small">{instructions}</p>}
+        </>
+      )}
       <p className="goal">Objectif · {formatTarget(exercise.kind, ex.target)}</p>
 
       {timed && timer ? (

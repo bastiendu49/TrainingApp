@@ -1,4 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { EXERCISE_INFO } from '../data/exerciseInfo'
+import type { Photo } from '../domain/backup'
+import type { Exercise } from '../domain/types'
+import { Illustration } from '../lib/Illustration'
+import { resolveIllustration } from '../lib/illustrationChoice'
+import { photoToDataUrl } from '../lib/photo'
 import { isNotebookLog } from '../data/notebook'
 import { formatTarget } from '../domain/format'
 import { averageRating, formatResults, sortedHistory, type SetResult, type WorkoutLog } from '../domain/log'
@@ -16,6 +22,9 @@ type Props = {
   history: WorkoutLog[]
   onSaveLog: (log: WorkoutLog) => void
   onDeleteLog: (id: string) => void
+  photos: Record<string, Photo>
+  onSetPhoto: (exerciseId: string, dataUrl: string | undefined) => void
+  onSetIllustration: (exerciseId: string, choice: Exercise['illustration']) => void
   /** Sections ajoutées par les étapes suivantes (calendrier, bilan). */
   extraSections?: { id: string; label: string; render: (open: (v: View) => void) => React.ReactNode }[]
 }
@@ -28,7 +37,7 @@ const monthLabel = (ms: number) => {
 const isTimed = (e: { target: { seconds?: number } }) => (e.target.seconds ?? 0) > 0
 
 /** Onglet Suivi : séances passées (modifiables) et fiche de chaque exercice. */
-export function Suivi({ program, history, onSaveLog, onDeleteLog, extraSections = [] }: Props) {
+export function Suivi({ program, history, onSaveLog, onDeleteLog, photos, onSetPhoto, onSetIllustration, extraSections = [] }: Props) {
   const nav = useNavStack<View>()
   const [section, setSection] = useState<string>('seances')
 
@@ -54,7 +63,18 @@ export function Suivi({ program, history, onSaveLog, onDeleteLog, extraSections 
     }
   }
   if (nav.view?.kind === 'exercise') {
-    return <ExerciseSheet program={program} history={history} exerciseId={nav.view.id} onBack={nav.back} onOpenLog={(id) => nav.push({ kind: 'log', id })} />
+    return (
+      <ExerciseSheet
+        program={program}
+        history={history}
+        exerciseId={nav.view.id}
+        photo={photos[nav.view.id]}
+        onSetPhoto={onSetPhoto}
+        onSetIllustration={onSetIllustration}
+        onBack={nav.back}
+        onOpenLog={(id) => nav.push({ kind: 'log', id })}
+      />
+    )
   }
 
   const sections: { id: string; label: string }[] = [{ id: 'seances', label: 'Séances' }, { id: 'exercices', label: 'Exercices' }, ...extraSections]
@@ -117,8 +137,12 @@ function LogList({ program, history, onOpen }: { program: Program; history: Work
 }
 
 function ExerciseList({ program, history, onOpen }: { program: Program; history: WorkoutLog[]; onOpen: (id: string) => void }) {
-  const list = practicedExercises(history).filter((e) => program.exercises[e.exerciseId])
-  if (!list.length) return <p className="panel muted">Les exercices apparaîtront ici après ta première séance.</p>
+  const practiced = practicedExercises(history).filter((e) => program.exercises[e.exerciseId])
+  const others = Object.values(program.exercises)
+    .filter((e) => !practiced.some((p) => p.exerciseId === e.id))
+    .sort((a, b) => a.name.localeCompare(b.name, 'fr'))
+    .map((e) => ({ exerciseId: e.id, count: 0 }))
+  const list = [...practiced, ...others]
   return (
     <div className="list">
       {list.map(({ exerciseId, count }) => {
@@ -129,7 +153,7 @@ function ExerciseList({ program, history, onOpen }: { program: Program; history:
             <span className="list-main">
               <span className="block-title">{ex.name}</span>
               <span className="muted small">
-                {count} séance{count > 1 ? 's' : ''}
+                {count ? `${count} séance${count > 1 ? 's' : ''}` : 'jamais fait'}
                 {record ? ` · record ${formatResults([record.best], ex.kind === 'time' ? 's' : 'reps')}` : ''}
               </span>
             </span>
@@ -141,8 +165,32 @@ function ExerciseList({ program, history, onOpen }: { program: Program; history:
   )
 }
 
-function ExerciseSheet({ program, history, exerciseId, onBack, onOpenLog }: { program: Program; history: WorkoutLog[]; exerciseId: string; onBack: () => void; onOpenLog: (id: string) => void }) {
+type SheetProps = {
+  program: Program
+  history: WorkoutLog[]
+  exerciseId: string
+  photo: Photo | undefined
+  onSetPhoto: Props['onSetPhoto']
+  onSetIllustration: Props['onSetIllustration']
+  onBack: () => void
+  onOpenLog: (id: string) => void
+}
+
+const ILLUSTRATION_LABEL = { photo: 'ta photo', free: 'image libre', picto: 'pictogramme' }
+
+function ExerciseSheet({ program, history, exerciseId, photo, onSetPhoto, onSetIllustration, onBack, onOpenLog }: SheetProps) {
   const ex = program.exercises[exerciseId]
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+  const info = EXERCISE_INFO[exerciseId]
+  const instructions = ex?.instructions ?? info?.instructions
+  const choices: [NonNullable<Exercise['illustration']>, string][] = [
+    ['auto', 'Automatique'],
+    ...(info?.image ? [['free', 'Image libre'] as [NonNullable<Exercise['illustration']>, string]] : []),
+    ['picto', 'Pictogramme'],
+    ...(photo?.dataUrl ? [['photo', 'Ma photo'] as [NonNullable<Exercise['illustration']>, string]] : []),
+  ]
+  const shown = ex ? resolveIllustration(ex, photo) : 'picto'
   const sessions = exerciseSessions(history, exerciseId)
   const record = personalRecord(history, exerciseId)
   const points = progressPoints(history, exerciseId)
@@ -158,6 +206,67 @@ function ExerciseSheet({ program, history, exerciseId, onBack, onOpenLog }: { pr
         </button>
         <h1>{ex?.name ?? exerciseId}</h1>
       </header>
+      {ex && <Illustration exercise={ex} photo={photo} />}
+      {instructions && (
+        <section className="panel">
+          <h2>Consignes</h2>
+          <p>{instructions}</p>
+        </section>
+      )}
+      {ex && (
+        <section className="panel">
+          <h2>Image</h2>
+          <div className="chips">
+            {choices.map(([value, label]) => {
+              const on = (ex.illustration ?? 'auto') === value
+              return (
+                <button key={value} className={on ? 'chip on' : 'chip'} aria-pressed={on} onClick={() => onSetIllustration(ex.id, value)}>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+          <p className="muted small">
+            Affichée : {ILLUSTRATION_LABEL[shown]}
+            {info?.image && shown === 'free' ? ` (« ${info.image.title} », ${info.image.author}, ${info.image.license})` : ''}
+          </p>
+          <div className="row-buttons">
+            <button className="secondary" onClick={() => fileInput.current?.click()}>
+              {photo?.dataUrl ? 'Changer ma photo' : 'Ajouter ma photo'}
+            </button>
+            {photo?.dataUrl && (
+              <button
+                className="secondary"
+                onClick={() => {
+                  if (window.confirm('Supprimer ta photo pour cet exercice ?')) onSetPhoto(ex.id, undefined)
+                }}
+              >
+                Supprimer ma photo
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            hidden
+            aria-label="Choisir une photo"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (!file) return
+              try {
+                setPhotoError(null)
+                onSetPhoto(ex.id, await photoToDataUrl(file))
+                onSetIllustration(ex.id, 'photo')
+              } catch {
+                setPhotoError('Impossible de lire cette image.')
+              }
+            }}
+          />
+          {photoError && <p className="error-text">{photoError}</p>}
+        </section>
+      )}
       {record && (
         <section className="panel record">
           <p className="kicker plain">Record</p>
@@ -165,11 +274,14 @@ function ExerciseSheet({ program, history, exerciseId, onBack, onOpenLog }: { pr
           <p className="muted small">le {dayLabel(record.log.startedAt)}</p>
         </section>
       )}
+      {sessions.length > 0 && (
       <section className="panel">
         <h2>Évolution</h2>
         <p className="muted small">{loaded ? 'Lest de la meilleure série à chaque séance' : `Meilleure série à chaque séance (${unit})`}</p>
         <LineChart points={points} unit={unit} label={`Évolution de ${ex?.name ?? exerciseId}`} />
       </section>
+      )}
+      {sessions.length > 0 && (
       <section className="panel">
         <h2>Historique</h2>
         <ul className="rows">
@@ -183,6 +295,7 @@ function ExerciseSheet({ program, history, exerciseId, onBack, onOpenLog }: { pr
           ))}
         </ul>
       </section>
+      )}
     </main>
   )
 }

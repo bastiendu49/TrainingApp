@@ -14,7 +14,7 @@ export default defineConfig({
       registerType: 'prompt',
       injectRegister: null,
       // woff2 : la police est embarquée, elle doit être précachée pour le hors-ligne.
-      workbox: { cleanupOutdatedCaches: true, globPatterns: ['**/*.{js,css,html,png,woff2}'] },
+      workbox: { cleanupOutdatedCaches: true, globPatterns: ['**/*.{js,css,html,png,jpg,woff2}'] },
       includeAssets: ['favicon.png'],
       manifest: {
         name: 'Training-app',

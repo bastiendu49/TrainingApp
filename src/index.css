@@ -306,6 +306,7 @@ h2 {
 
 .panel {
   display: grid;
+  min-width: 0;
   gap: 6px;
   padding: 16px;
   border-radius: 18px;
@@ -1081,4 +1082,201 @@ h2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+/* ---------- illustrations ---------- */
+
+.illustration {
+  display: grid;
+  place-items: center;
+  height: 210px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.illustration.compact {
+  height: 150px;
+}
+
+/* Les dessins libres sont en noir sur fond blanc ou transparent : fond clair dans les deux thèmes. */
+.illustration.free {
+  background: #ffffff;
+}
+
+.illustration img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.illustration.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pictogram {
+  width: 78%;
+  max-height: 92%;
+}
+
+.pg-fig {
+  fill: none;
+  stroke: var(--tech);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pg-head {
+  fill: var(--tech);
+}
+
+.pg-gear {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.pg-bar {
+  fill: var(--muted);
+}
+
+.text-btn.left {
+  justify-self: start;
+  padding: 0;
+  min-height: 32px;
+}
+
+.help {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+/* ---------- édition du programme ---------- */
+
+.editor {
+  gap: 10px;
+}
+
+.editor summary {
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.editor summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor[open] summary {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.circ-t {
+  color: var(--circ-t);
+}
+
+.tech-t {
+  color: var(--tech-t);
+}
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.mini-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mini-stepper button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--soft);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.mini-stepper button:disabled {
+  opacity: 0.35;
+}
+
+.mini-stepper strong {
+  min-width: 5.5ch;
+  text-align: center;
+}
+
+.item-row {
+  display: grid;
+  gap: 2px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.item-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.item-tools .icon-btn {
+  width: 40px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.item-tools .icon-btn:disabled {
+  opacity: 0.3;
+}
+
+.add-row {
+  display: flex;
+  gap: 8px;
+}
+
+.add-row select {
+  /* width: 0 + flex: 1 : la liste prend la place restante sans que ses longs noms élargissent la carte. */
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.add-row button,
+.new-exercise button {
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.new-exercise {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.credits a {
+  color: var(--accent);
+  font-weight: 600;
 }

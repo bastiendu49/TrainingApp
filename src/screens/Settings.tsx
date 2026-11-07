@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
+import { FREE_IMAGES } from '../data/exerciseInfo'
 import { parseBackup, toBackup, type DataSet } from '../domain/backup'
+import { IconChevron } from '../lib/icons'
 import { checkCode, type SyncStatus } from '../lib/sync'
 
 type Props = {
@@ -10,14 +12,13 @@ type Props = {
   onSetCode: (code: string | undefined) => void
   onSyncNow: () => void
   onImport: (data: DataSet) => void
-  /** Liens vers les autres réglages (étapes suivantes). */
-  children?: React.ReactNode
+  onEditProgram: () => void
 }
 
 const time = (ms: number) =>
   new Date(ms).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow, onImport, children }: Props) {
+export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow, onImport, onEditProgram }: Props) {
   const [draft, setDraft] = useState('')
   const [checking, setChecking] = useState(false)
   const [codeError, setCodeError] = useState<string | null>(null)
@@ -72,7 +73,15 @@ export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow,
         <h1>Plus</h1>
       </header>
 
-      {children}
+      <div className="list">
+        <button className="list-item" onClick={onEditProgram}>
+          <span className="list-main">
+            <span className="block-title">Modifier le programme</span>
+            <span className="muted small">Circuits, objectifs, repos, techniques, échauffements</span>
+          </span>
+          <IconChevron size={18} />
+        </button>
+      </div>
 
       <section className="panel">
         <h2>Sauvegarde en ligne</h2>
@@ -142,6 +151,23 @@ export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow,
             {fileMessage}
           </p>
         )}
+      </section>
+
+      <section className="panel">
+        <h2>Crédits des images</h2>
+        <p className="muted small">Images libres de la base wger, sous licence Creative Commons BY-SA. Les autres exercices sont illustrés par des pictogrammes dessinés pour l’app.</p>
+        <ul className="rows credits">
+          {FREE_IMAGES.map((img) => (
+            <li key={img.src}>
+              <span>
+                « {img.title} » · {img.author}
+              </span>
+              <a href={img.url} target="_blank" rel="noreferrer">
+                {img.license}
+              </a>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <p className="version muted">Training · version {__BUILD__}</p>
