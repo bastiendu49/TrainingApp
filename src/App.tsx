@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { buildNotebookHistory } from './data/notebook'
 import { useAppData } from './domain/appData'
 import { mergeData } from './domain/backup'
 import { startSession, type ActiveSession } from './domain/session'
@@ -11,6 +12,7 @@ import { ComingSoon } from './screens/ComingSoon'
 import { Guided } from './screens/Guided'
 import { SessionDetail } from './screens/SessionDetail'
 import { Settings } from './screens/Settings'
+import { Suivi } from './screens/Suivi'
 import { Today } from './screens/Today'
 
 type Tab = 'seance' | 'suivi' | 'corps' | 'plus'
@@ -22,7 +24,7 @@ const TABS: { id: Tab; label: string; Icon: (p: { size?: number }) => React.Reac
   { id: 'plus', label: 'Plus', Icon: IconMore },
 ]
 
-type AppSettings = { syncCode?: string; lastSyncAt?: number }
+type AppSettings = { syncCode?: string; lastSyncAt?: number; notebookImported?: boolean }
 
 export default function App() {
   // Enregistre le service worker (hors ligne). Une nouvelle version attend la prochaine
@@ -41,6 +43,14 @@ export default function App() {
   const loaded = app.loaded && activeStore.loaded && settingsStore.loaded
   const onSynced = useCallback((at: number) => setSettings((s) => ({ ...s, lastSyncAt: at })), [setSettings])
   const sync = useSync(loaded, app.data, app.replace, settings.syncCode, onSynced)
+
+  // Premier lancement : ajoute l'historique noté dans le carnet (une seule fois).
+  const { importLogs } = app
+  useEffect(() => {
+    if (!loaded || settings.notebookImported) return
+    importLogs(buildNotebookHistory(program))
+    setSettings((s) => ({ ...s, notebookImported: true }))
+  }, [loaded, settings.notebookImported, importLogs, program, setSettings])
 
   // Le bouton retour d'Android ferme le détail au lieu de quitter l'app.
   useEffect(() => {
@@ -107,7 +117,7 @@ export default function App() {
       />
     )
   } else if (tab === 'suivi') {
-    content = <ComingSoon title="Suivi" text="Historique, fiches d’exercices avec tes records et tes courbes, calendrier et bilan mensuel : étapes 4 et 6." />
+    content = <Suivi program={program} history={history} onSaveLog={app.saveLog} onDeleteLog={app.deleteLog} />
   } else if (tab === 'corps') {
     content = <ComingSoon title="Corps" text="Poids et mensurations avec leurs courbes : étape 6." />
   } else {

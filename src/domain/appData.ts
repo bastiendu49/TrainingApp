@@ -49,6 +49,18 @@ export function useAppData() {
     [setHistory, setTombstones],
   )
 
+  /** Ajoute des séances (historique du carnet) sans écraser ni ressusciter une séance supprimée. */
+  const importLogs = useCallback(
+    (logs: WorkoutLog[]) => {
+      const dead = new Set(tombstones.filter((t) => t.kind === 'history').map((t) => t.id))
+      setHistory((h) => {
+        const known = new Set(h.map((l) => l.id))
+        return [...h, ...logs.filter((l) => !known.has(l.id) && !dead.has(l.id))]
+      })
+    },
+    [tombstones, setHistory],
+  )
+
   const saveBody = useCallback((entry: BodyEntry) => setBody((b) => [...b.filter((e) => e.id !== entry.id), { ...entry, updatedAt: Date.now() }]), [setBody])
 
   const deleteBody = useCallback(
@@ -61,7 +73,7 @@ export function useAppData() {
 
   const setPhoto = useCallback((exerciseId: string, dataUrl: string | undefined) => setPhotos((p) => ({ ...p, [exerciseId]: { dataUrl, updatedAt: Date.now() } })), [setPhotos])
 
-  return { data, loaded, error, replace, updateProgram, saveLog, deleteLog, saveBody, deleteBody, setPhoto }
+  return { data, loaded, error, replace, updateProgram, saveLog, deleteLog, importLogs, saveBody, deleteBody, setPhoto }
 }
 
 export type AppData = ReturnType<typeof useAppData>
