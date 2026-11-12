@@ -1280,3 +1280,200 @@ h2 {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* ---------- retours de la première séance ---------- */
+
+/* Texte plus gros pendant la séance : lisible d'un coup d'œil, téléphone posé à côté. */
+.guided {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  font-size: 1.05rem;
+}
+
+.guided .muted,
+.guided .small {
+  font-size: 1rem;
+}
+
+.guided .step-head {
+  font-size: 1rem;
+}
+
+.guided .goal {
+  font-size: 1.15rem;
+}
+
+.guided .block-title {
+  font-size: 1.2rem;
+}
+
+.guided .kicker {
+  font-size: 0.85rem;
+}
+
+.guided-foot {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: calc(56px + env(safe-area-inset-bottom));
+  padding: 0 18px env(safe-area-inset-bottom);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.elapsed {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.target-big {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.cta.big {
+  height: 72px;
+  font-size: 1.4rem;
+}
+
+.stepper.medium .big-num {
+  font-size: 4rem;
+}
+
+.stepper.medium button {
+  width: 56px;
+  height: 56px;
+}
+
+.done-box {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid var(--accent);
+  border-radius: 18px;
+  background: var(--surface);
+}
+
+.done-box .stepper button,
+.done-box .load button {
+  background: var(--soft);
+}
+
+.rating button {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  min-height: 64px;
+  padding: 6px 2px;
+}
+
+.rating button strong {
+  font-size: 1.2rem;
+}
+
+.rating button span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.up-next {
+  grid-template-columns: minmax(0, 1fr) 120px;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.up-next-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.up-next-image .illustration.compact {
+  height: 96px;
+  border-radius: 12px;
+}
+
+.volume {
+  display: grid;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.volume input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.toggle input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  accent-color: var(--accent);
+}
+
+/* Écran de repos compact : l'exercice suivant (et son image) reste visible sans faire défiler. */
+.ring-timer.small {
+  width: min(190px, 52vw);
+}
+
+.ring-timer.small .ring-num {
+  font-size: 3.4rem;
+}
+
+.done-box {
+  gap: 4px;
+  padding: 10px 14px;
+}
+
+.done-title {
+  display: grid;
+}
+
+.done-box .stepper.medium .big-num {
+  font-size: 3.2rem;
+}
+
+.done-box .stepper.medium button {
+  width: 50px;
+  height: 50px;
+}
+
+.guided .rate-box {
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+.guided .step {
+  gap: 12px;
+}
+
+.rest-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.rest-top .ring-timer.small {
+  width: min(180px, 48vw);
+}
+
+.adjust.vertical {
+  flex-direction: column;
+}
+
+.adjust.vertical button {
+  min-height: 50px;
+}

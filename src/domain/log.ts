@@ -87,3 +87,8 @@ export function averageRating(ratings: (number | null)[]): number | null {
   const rated = ratings.filter((r) => r !== null)
   return rated.length ? Math.round(rated.reduce((a, b) => a + b, 0) / rated.length) : null
 }
+
+/** Ressenti d'un tour en mots : 1 = très facile … 5 = très dur. */
+export const RATING_LABELS = ['Très facile', 'Facile', 'Moyen', 'Dur', 'Très dur'] as const
+
+export const ratingLabel = (rating: number): string => RATING_LABELS[Math.min(5, Math.max(1, Math.round(rating))) - 1]

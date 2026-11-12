@@ -231,3 +231,25 @@ export function upcomingExercise(active: ActiveSession): Extract<Step, { kind: '
 export function finishLog(active: ActiveSession, comment: string, now: number): WorkoutLog {
   return { ...active.log, comment: comment.trim(), endedAt: now, updatedAt: now }
 }
+
+/** L'exercice en cours est-il suivi d'un repos ? (sinon, les reps se saisissent tout de suite) */
+export function restFollows(active: ActiveSession): boolean {
+  return active.steps[active.index + 1]?.kind === 'rest'
+}
+
+/** Pendant un repos : l'exercice qui vient d'être fait, pour corriger son résultat. */
+export function justDone(active: ActiveSession): Extract<Step, { kind: 'exercise' }> | null {
+  const previous = active.steps[active.index - 1]
+  return active.steps[active.index]?.kind === 'rest' && previous?.kind === 'exercise' ? previous : null
+}
+
+/** Corrige le résultat d'une série déjà faite, sans toucher au minuteur ni à l'étape en cours. */
+export function correctResult(active: ActiveSession, ex: number, set: number, result: SetResult | null, now: number): ActiveSession {
+  const exercises = active.log.exercises.map((e, i) => {
+    if (i !== ex) return e
+    const results = [...e.results]
+    results[set] = result
+    return { ...e, results }
+  })
+  return { ...active, log: { ...active.log, exercises, updatedAt: now } }
+}

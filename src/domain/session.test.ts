@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { WorkoutLog } from './log'
+import { ratingLabel, type WorkoutLog } from './log'
 import { INITIAL_PROGRAM as P } from './program'
 import {
   adjustRest,
+  correctResult,
   enterStep,
+  justDone,
   finishLog,
   goToFinish,
   next,
@@ -12,6 +14,7 @@ import {
   rateRound,
   ratingOf,
   recordAndNext,
+  restFollows,
   startSession,
   startWork,
   suggestedValue,
@@ -175,5 +178,38 @@ describe('suggestedValue', () => {
   it('garde le lest prévu pour les tractions lestées', () => {
     const pull = startSession(P, 'pull-a', T0)
     expect(suggestedValue([], pull.log.exercises[0], 0, T0)).toEqual({ value: 5, loadKg: 17 })
+  })
+})
+
+describe('saisie des reps pendant le repos', () => {
+  it('sait si un repos suit l’exercice en cours', () => {
+    const a = startSession(P, 'push', T0)
+    expect(restFollows(enterStep(a, 1, T0))).toBe(true) // série 1 de technique → repos
+    const last = a.steps.findIndex((s) => s.kind === 'rating') - 1 // dernier exercice du dernier tour
+    expect(restFollows(enterStep(a, last, T0))).toBe(false)
+  })
+
+  it('retrouve l’exercice qui vient d’être fait pendant le repos', () => {
+    let a = next(startSession(P, 'push', T0), T0)
+    a = recordAndNext(a, { value: 20 }, T0)
+    expect(justDone(a)).toMatchObject({ kind: 'exercise', ex: 0, set: 0 })
+    expect(justDone(startSession(P, 'push', T0))).toBeNull()
+  })
+
+  it('corrige le résultat sans toucher au repos en cours', () => {
+    let a = next(startSession(P, 'push', T0), T0)
+    a = recordAndNext(a, { value: 20 }, T0)
+    const corrected = correctResult(a, 0, 0, { value: 17 }, T0 + 5000)
+    expect(corrected.log.exercises[0].results[0]).toEqual({ value: 17 })
+    expect(corrected.index).toBe(a.index)
+    expect(corrected.timer).toEqual(a.timer)
+  })
+})
+
+describe('ressenti en mots', () => {
+  it('va de très facile à très dur', () => {
+    expect(ratingLabel(1)).toBe('Très facile')
+    expect(ratingLabel(3)).toBe('Moyen')
+    expect(ratingLabel(5)).toBe('Très dur')
   })
 })

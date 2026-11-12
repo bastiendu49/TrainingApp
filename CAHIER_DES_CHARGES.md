@@ -217,3 +217,18 @@ Chaque étape donne une version utilisable sur le téléphone. Étapes 0 et 1 su
 1. Netlify → le projet → Project configuration → Environment variables → Add a variable : clé `SYNC_CODE`, valeur = un code secret de ton choix (long, sans espace).
 2. Relancer un déploiement (Deploys → Trigger deploy) pour que la fonction prenne le code en compte.
 3. Dans l'app : Plus → Sauvegarde en ligne → saisir le même code → « Activer la sauvegarde ».
+
+## Retours après la première séance (12 novembre 2026)
+- **Temps global** de la séance affiché en bas à gauche, pendant toute la séance.
+- **Sons** :
+  - volume au maximum par défaut, réglable dans Plus › Sons et dans les Options de la séance, avec un bouton « Tester le son » ;
+  - bips en onde carrée, plus perçants ;
+  - pendant un exercice en durée, un métronome discret (un tic chaque seconde, désactivable), puis 5 bips distincts et de plus en plus aigus sur les 5 dernières secondes, au volume maximum ;
+  - le repos garde 3 bips de fin ;
+  - un bip long marque chaque départ.
+- **Reps saisies pendant le repos** : quand un repos suit l'exercice, l'écran d'exercice n'a plus qu'un bouton « Terminé ».
+  - Le repos démarre aussitôt, et le nombre de reps (ou la durée tenue), pré-rempli avec la dernière fois, se corrige pendant le repos sans le rallonger.
+  - Sans repos ensuite, le compteur reste sur l'écran d'exercice.
+- **Pendant le repos**, l'image du prochain exercice est en bas à droite. L'écran est compacté (boutons de repos à droite de l'anneau) pour que tout tienne sans défiler.
+- **Texte de la séance agrandi** (infos secondaires à 16 px et plus).
+- **Ressenti en mots** : 1 Très facile · 2 Facile · 3 Moyen · 4 Dur · 5 Très dur, aussi dans l'historique et le bilan.

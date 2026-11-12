@@ -6,7 +6,7 @@ import { mergeData } from './domain/backup'
 import { applySuggestion, computeSuggestions, setSkillLevel } from './domain/progression'
 import { startSession, type ActiveSession } from './domain/session'
 import { usePersisted } from './domain/store'
-import { unlockAudio } from './lib/audio'
+import { setVolume, unlockAudio } from './lib/audio'
 import { IconBody, IconChart, IconMore, IconRings } from './lib/icons'
 import { useSync } from './lib/sync'
 import { useNavStack } from './lib/useNavStack'
@@ -29,7 +29,16 @@ const TABS: { id: Tab; label: string; Icon: (p: { size?: number }) => React.Reac
   { id: 'plus', label: 'Plus', Icon: IconMore },
 ]
 
-type AppSettings = { syncCode?: string; lastSyncAt?: number; notebookImported?: boolean; dismissed?: string[] }
+type AppSettings = {
+  syncCode?: string
+  lastSyncAt?: number
+  notebookImported?: boolean
+  dismissed?: string[]
+  /** Volume des bips, de 0 à 1 (1 par défaut). */
+  soundVolume?: number
+  /** Tic chaque seconde pendant les exercices en durée (oui par défaut). */
+  metronome?: boolean
+}
 
 export default function App() {
   // Enregistre le service worker (hors ligne). Une nouvelle version attend la prochaine
@@ -47,6 +56,9 @@ export default function App() {
   const plusNav = useNavStack<'program'>()
 
   const loaded = app.loaded && activeStore.loaded && settingsStore.loaded
+  const sound = { volume: settings.soundVolume ?? 1, metronome: settings.metronome ?? true }
+  const setSound = useCallback((s: { volume: number; metronome: boolean }) => setSettings((st) => ({ ...st, soundVolume: s.volume, metronome: s.metronome })), [setSettings])
+  useEffect(() => setVolume(sound.volume), [sound.volume])
   const onSynced = useCallback((at: number) => setSettings((s) => ({ ...s, lastSyncAt: at })), [setSettings])
   const sync = useSync(loaded, app.data, app.replace, settings.syncCode, onSynced)
 
@@ -91,6 +103,8 @@ export default function App() {
         photos={app.data.photos}
         active={active}
         update={update}
+        sound={sound}
+        onSound={setSound}
         onSave={(log) => {
           app.saveLog(log)
           setActive(null)
@@ -169,6 +183,8 @@ export default function App() {
         onSyncNow={() => void sync.sync()}
         onImport={(d) => app.replace(mergeData(app.data, d))}
         onEditProgram={() => plusNav.push('program')}
+        sound={sound}
+        onSound={setSound}
       />
     )
   }

@@ -7,7 +7,7 @@ import { resolveIllustration } from '../lib/illustrationChoice'
 import { photoToDataUrl } from '../lib/photo'
 import { isNotebookLog } from '../data/notebook'
 import { formatTarget } from '../domain/format'
-import { averageRating, formatResults, sortedHistory, type SetResult, type WorkoutLog } from '../domain/log'
+import { averageRating, formatResults, RATING_LABELS, ratingLabel, sortedHistory, type SetResult, type WorkoutLog } from '../domain/log'
 import { exerciseSessions, personalRecord, practicedExercises, progressPoints, setsDone } from '../domain/stats'
 import type { Program } from '../domain/types'
 import { IconBack, IconChevron } from '../lib/icons'
@@ -121,7 +121,7 @@ function LogList({ program, history, onOpen }: { program: Program; history: Work
                   <span className="list-main">
                     <span className="block-title">{session?.name ?? log.sessionName}</span>
                     <span className="muted small">
-                      {dayLabel(log.startedAt)} · {setsDone(log)} séries{rating ? ` · ressenti ${rating}/5` : ''}
+                      {dayLabel(log.startedAt)} · {setsDone(log)} séries{rating ? ` · ${ratingLabel(rating).toLowerCase()}` : ''}
                       {isNotebookLog(log.id) ? ' · carnet' : ''}
                     </span>
                   </span>
@@ -392,9 +392,9 @@ function LogEditor({ program, log, onBack, onSave, onDelete }: { program: Progra
                     <span className="muted small">T{round + 1}</span>
                     <select value={value ?? ''} aria-label={`Ressenti du tour ${round + 1}`} onChange={(ev) => setRating(circuitId, round, ev.target.value ? Number(ev.target.value) : null)}>
                       <option value="">–</option>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
+                      {RATING_LABELS.map((label, i) => (
+                        <option key={label} value={i + 1}>
+                          {i + 1} · {label}
                         </option>
                       ))}
                     </select>

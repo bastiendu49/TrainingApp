@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { FREE_IMAGES } from '../data/exerciseInfo'
 import { parseBackup, toBackup, type DataSet } from '../domain/backup'
+import { testSound } from '../lib/audio'
 import { IconChevron } from '../lib/icons'
 import { checkCode, type SyncStatus } from '../lib/sync'
 
@@ -13,12 +14,14 @@ type Props = {
   onSyncNow: () => void
   onImport: (data: DataSet) => void
   onEditProgram: () => void
+  sound: { volume: number; metronome: boolean }
+  onSound: (s: { volume: number; metronome: boolean }) => void
 }
 
 const time = (ms: number) =>
   new Date(ms).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
-export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow, onImport, onEditProgram }: Props) {
+export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow, onImport, onEditProgram, sound, onSound }: Props) {
   const [draft, setDraft] = useState('')
   const [checking, setChecking] = useState(false)
   const [codeError, setCodeError] = useState<string | null>(null)
@@ -82,6 +85,22 @@ export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow,
           <IconChevron size={18} />
         </button>
       </div>
+
+      <section className="panel">
+        <h2>Sons</h2>
+        <label className="volume">
+          <span>Volume des bips : {Math.round(sound.volume * 100)} %</span>
+          <input type="range" min={0} max={100} step={5} value={Math.round(sound.volume * 100)} onChange={(e) => onSound({ ...sound, volume: Number(e.target.value) / 100 })} />
+        </label>
+        <label className="toggle">
+          <input type="checkbox" checked={sound.metronome} onChange={(e) => onSound({ ...sound, metronome: e.target.checked })} />
+          <span>Métronome pendant les exercices en durée (tic discret chaque seconde)</span>
+        </label>
+        <p className="muted small">Sur Android, c’est le volume multimédia du téléphone qui s’applique. Les 5 dernières secondes d’un exercice en durée sont annoncées par 5 bips différents.</p>
+        <button className="secondary" onClick={testSound}>
+          Tester le son
+        </button>
+      </section>
 
       <section className="panel">
         <h2>Sauvegarde en ligne</h2>

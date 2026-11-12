@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
+import { EXERCISE_INFO } from '../data/exerciseInfo'
+import type { Photo } from '../domain/backup'
 import { formatDuration, formatTarget } from '../domain/format'
-import { averageRating, formatResults, lastPerformance, type SetResult, type WorkoutLog } from '../domain/log'
+import { averageRating, formatResults, lastPerformance, RATING_LABELS, ratingLabel, type SetResult, type WorkoutLog } from '../domain/log'
 import {
   adjustRest,
+  correctResult,
   finishLog,
   goToFinish,
+  justDone,
   next,
   progress,
   rateRound,
   ratingOf,
   recordAndNext,
+  restFollows,
   startWork,
   suggestedValue,
   toggleWarmupItem,
@@ -19,14 +24,14 @@ import {
   type Timer,
 } from '../domain/session'
 import type { Program } from '../domain/types'
-import { EXERCISE_INFO } from '../data/exerciseInfo'
-import type { Photo } from '../domain/backup'
+import { countdownBeep, go, metronomeTick, testSound, unlockAudio } from '../lib/audio'
 import { Illustration } from '../lib/Illustration'
-import { go, tick, unlockAudio } from '../lib/audio'
 import { formatClock } from '../lib/time'
 import { useWakeLock } from '../lib/useWakeLock'
 
 type Update = (fn: (a: ActiveSession) => ActiveSession) => void
+
+export type SoundSettings = { volume: number; metronome: boolean }
 
 type Props = {
   program: Program
@@ -34,18 +39,23 @@ type Props = {
   photos: Record<string, Photo>
   active: ActiveSession
   update: Update
+  sound: SoundSettings
+  onSound: (s: SoundSettings) => void
   onSave: (log: WorkoutLog) => void
   onAbort: () => void
   /** Revenir à l'accueil sans arrêter la séance. */
   onMinimize: () => void
 }
 
-/** La séance guidée : tout s'enchaîne seul, il suffit de valider chaque exercice. */
-export function Guided({ program, history, photos, active, update, onSave, onAbort, onMinimize }: Props) {
+/** Bips de fin : 5 dernières secondes d'un exercice en durée, 3 dernières d'un repos ou d'une préparation. */
+const COUNTDOWN_FROM = { work: 5, rest: 3, prep: 3 } as const
+
+/** La séance guidée : tout s'enchaîne seul, il suffit d'appuyer sur « Terminé » à chaque exercice. */
+export function Guided({ program, history, photos, active, update, sound, onSound, onSave, onAbort, onMinimize }: Props) {
   useWakeLock()
   const [now, setNow] = useState(() => Date.now())
   const [menu, setMenu] = useState(false)
-  const lastTick = useRef('')
+  const lastSecond = useRef('')
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 200)
@@ -76,16 +86,18 @@ export function Guided({ program, history, photos, active, update, onSave, onAbo
     }
   }, [now, timer, active.index, update])
 
-  // Bip court sur chacune des 3 dernières secondes.
+  // Une fois par seconde : bips de fin, ou tic du métronome pendant un exercice en durée.
   useEffect(() => {
     if (!timer) return
     const remaining = Math.ceil((timer.endsAt - now) / 1000)
-    const key = `${active.index}-${timer.kind}-${remaining}`
-    if (remaining >= 1 && remaining <= 3 && lastTick.current !== key) {
-      lastTick.current = key
-      tick()
-    }
-  }, [now, timer, active.index])
+    const key = `${active.index}-${timer.kind}-${timer.endsAt}-${remaining}`
+    if (remaining < 1 || lastSecond.current === key) return
+    lastSecond.current = key
+    const total = Math.round((timer.endsAt - timer.startedAt) / 1000)
+    if (remaining <= COUNTDOWN_FROM[timer.kind]) countdownBeep(remaining)
+    // Pas de tic à la toute première seconde : le bip de départ vient de sonner.
+    else if (timer.kind === 'work' && sound.metronome && remaining < total) metronomeTick()
+  }, [now, timer, active.index, sound.metronome])
 
   const act: Update = (fn) => {
     unlockAudio()
@@ -99,13 +111,24 @@ export function Guided({ program, history, photos, active, update, onSave, onAbo
   return (
     <div className="guided">
       <header className="guided-top">
-        <span className="muted small">{session?.name ?? active.log.sessionName}</span>
+        <span className="muted">{session?.name ?? active.log.sessionName}</span>
         <button className="text-btn" onClick={() => setMenu((m) => !m)} aria-expanded={menu}>
           {menu ? 'Fermer' : 'Options'}
         </button>
       </header>
       {menu && (
         <div className="menu">
+          <label className="volume">
+            <span>Volume des bips : {Math.round(sound.volume * 100)} %</span>
+            <input type="range" min={0} max={100} step={5} value={Math.round(sound.volume * 100)} onChange={(e) => onSound({ ...sound, volume: Number(e.target.value) / 100 })} />
+          </label>
+          <label className="toggle">
+            <input type="checkbox" checked={sound.metronome} onChange={(e) => onSound({ ...sound, metronome: e.target.checked })} />
+            <span>Métronome pendant les exercices en durée</span>
+          </label>
+          <button className="secondary" onClick={testSound}>
+            Tester le son
+          </button>
           {step.kind !== 'finish' && (
             <button
               className="secondary"
@@ -142,9 +165,20 @@ export function Guided({ program, history, photos, active, update, onSave, onAbo
       {step.kind === 'exercise' && (
         <ExerciseStep key={active.index} program={program} history={history} photos={photos} active={active} step={step} now={now} act={act} />
       )}
-      {step.kind === 'rest' && <RestStep key={active.index} program={program} history={history} active={active} step={step} now={now} act={act} />}
+      {step.kind === 'rest' && <RestStep key={active.index} program={program} history={history} photos={photos} active={active} step={step} now={now} act={act} />}
       {step.kind === 'rating' && <RatingStep active={active} step={step} act={act} />}
       {step.kind === 'finish' && <FinishStep program={program} active={active} onSave={onSave} />}
+
+      {step.kind !== 'finish' && (
+        <footer className="guided-foot">
+          <span className="elapsed" aria-label="Temps écoulé depuis le début de la séance">
+            ⏱ {formatClock((now - active.log.startedAt) / 1000)}
+          </span>
+          <span className="muted">
+            {done}/{total} exercices
+          </span>
+        </footer>
+      )}
     </div>
   )
 }
@@ -177,7 +211,7 @@ function WarmupStep({ program, active, act }: Omit<StepProps<'warmup'>, 'history
               <label>
                 <input type="checkbox" checked={checked} onChange={() => act((a) => toggleWarmupItem(a, item.id, Date.now()))} />
                 <span className="check-label">{item.label}</span>
-                <span className="muted small">{item.detail}</span>
+                <span className="muted">{item.detail}</span>
               </label>
             </li>
           )
@@ -194,8 +228,48 @@ function lastLine(history: WorkoutLog[], exerciseId: string, before: number, tim
   const last = lastPerformance(history, exerciseId, before)
   if (!last) return null
   const rating = averageRating(last.ratings)
-  return `Dernière fois : ${formatResults(last.exercise.results, timed ? 's' : 'reps')}${rating ? ` — ressenti ${rating}/5` : ''}`
+  return `Dernière fois : ${formatResults(last.exercise.results, timed ? 's' : 'reps')}${rating ? ` — ${ratingLabel(rating).toLowerCase()}` : ''}`
 }
+
+/** Compteur − valeur + (reps ou secondes) et lest éventuel. */
+function ResultEditor({ value, load, unit, onValue, onLoad, size = 'big' }: { value: number; load?: number; unit: string; onValue: (v: number) => void; onLoad: (l: number | undefined) => void; size?: 'big' | 'medium' }) {
+  // Pendant le repos (taille moyenne), pas de lien « Ajouter du lest » : l'écran doit tenir en entier.
+  const canAddLoad = size === 'big'
+  return (
+    <>
+      <div className={`stepper ${size}`}>
+        <button aria-label="Une de moins" onClick={() => onValue(Math.max(0, value - 1))}>
+          −
+        </button>
+        <span className="big-num" aria-live="polite">
+          {value}
+        </span>
+        <button aria-label="Une de plus" onClick={() => onValue(value + 1)}>
+          +
+        </button>
+      </div>
+      <p className="center muted">{unit}</p>
+      {load !== undefined ? (
+        <div className="load">
+          <span>Lest</span>
+          <button aria-label="Moins de lest" onClick={() => onLoad(Math.max(0, load - 0.5))}>
+            −
+          </button>
+          <strong>+{load} kg</strong>
+          <button aria-label="Plus de lest" onClick={() => onLoad(load + 0.5)}>
+            +
+          </button>
+        </div>
+      ) : canAddLoad ? (
+        <button className="text-btn center" onClick={() => onLoad(1)}>
+          Ajouter du lest
+        </button>
+      ) : null}
+    </>
+  )
+}
+
+const unitLabel = (kind: string, timed: boolean) => (timed ? 'secondes' : kind === 'repsPerSide' ? 'répétitions par côté' : 'répétitions')
 
 function ExerciseStep({ program, history, photos, active, step, now, act }: StepProps<'exercise'> & { photos: Record<string, Photo> }) {
   const ex = active.log.exercises[step.ex]
@@ -204,6 +278,8 @@ function ExerciseStep({ program, history, photos, active, step, now, act }: Step
   const suggested = suggestedValue(history, ex, step.set, active.log.startedAt)
   const [value, setValue] = useState(suggested.value)
   const [load, setLoad] = useState<number | undefined>(suggested.loadKg)
+  // Repos ensuite : un simple « Terminé », les reps se corrigent pendant le repos.
+  const quick = restFollows(active)
   const upcoming = upcomingExercise(active)
   const timer = active.timer
   const last = lastLine(history, ex.exerciseId, active.log.startedAt, timed)
@@ -223,13 +299,13 @@ function ExerciseStep({ program, history, photos, active, step, now, act }: Step
           <button className="text-btn left" aria-expanded={showHelp} onClick={() => setShowHelp((v) => !v)}>
             {showHelp ? 'Masquer les consignes' : 'Consignes'}
           </button>
-          {showHelp && <p className="help small">{instructions}</p>}
+          {showHelp && <p className="help">{instructions}</p>}
         </>
       )}
-      <p className="goal">Objectif · {formatTarget(exercise.kind, ex.target)}</p>
 
       {timed && timer ? (
         <>
+          <p className="goal">Objectif · {formatTarget(exercise.kind, ex.target)}</p>
           <Ring remaining={remainingMs(timer, now)} total={timer.endsAt - timer.startedAt} tone={timer.kind === 'prep' ? 'muted' : 'accent'}>
             <p className="ring-label">{timer.kind === 'prep' ? 'Prépare-toi' : 'Tiens bon'}</p>
             <p className="ring-num">{formatClock(Math.ceil(remainingMs(timer, now) / 1000))}</p>
@@ -250,48 +326,33 @@ function ExerciseStep({ program, history, photos, active, step, now, act }: Step
             </button>
           )}
         </>
+      ) : quick ? (
+        <>
+          <div className="target-big">
+            <span className="big-num">{exercise.kind === 'max' || exercise.kind === 'failure' ? 'Max' : (ex.target.reps ?? suggested.value)}</span>
+            <span className="muted">{exercise.kind === 'repsPerSide' ? 'répétitions par côté' : exercise.kind === 'failure' ? 'jusqu’à l’échec' : 'répétitions'}{ex.target.loadKg ? ` · +${ex.target.loadKg} kg` : ''}</span>
+          </div>
+          <button className="cta big" onClick={() => act((a) => recordAndNext(a, withLoad(suggested.value, suggested.loadKg), Date.now()))}>
+            Terminé
+          </button>
+          <p className="center muted">Tu ajusteras le nombre de reps pendant le repos.</p>
+        </>
       ) : (
         <>
-          <div className="stepper">
-            <button aria-label="Une de moins" onClick={() => setValue((v) => Math.max(0, v - 1))}>
-              −
-            </button>
-            <span className="big-num" aria-live="polite">
-              {value}
-            </span>
-            <button aria-label="Une de plus" onClick={() => setValue((v) => v + 1)}>
-              +
-            </button>
-          </div>
-          <p className="center muted small">{exercise.kind === 'repsPerSide' ? 'répétitions par côté' : 'répétitions'}</p>
-          {load !== undefined ? (
-            <div className="load">
-              <span>Lest</span>
-              <button aria-label="Moins de lest" onClick={() => setLoad((l) => Math.max(0, (l ?? 0) - 0.5))}>
-                −
-              </button>
-              <strong>+{load} kg</strong>
-              <button aria-label="Plus de lest" onClick={() => setLoad((l) => (l ?? 0) + 0.5)}>
-                +
-              </button>
-            </div>
-          ) : (
-            <button className="text-btn center" onClick={() => setLoad(1)}>
-              Ajouter du lest
-            </button>
-          )}
+          <p className="goal">Objectif · {formatTarget(exercise.kind, ex.target)}</p>
+          <ResultEditor value={value} load={load} unit={unitLabel(exercise.kind, false)} onValue={setValue} onLoad={setLoad} />
           <button className="cta" onClick={() => act((a) => recordAndNext(a, withLoad(value, load || undefined), Date.now()))}>
             Valider
           </button>
         </>
       )}
 
-      {last && <p className="center muted small">{last}</p>}
+      {last && <p className="center muted">{last}</p>}
       <div className="step-foot">
         <button className="text-btn" onClick={() => act((a) => recordAndNext(a, null, Date.now()))}>
           Passer cet exercice
         </button>
-        {upcoming && <span className="muted small">Ensuite : {program.exercises[active.log.exercises[upcoming.ex].exerciseId].name}</span>}
+        {upcoming && <span className="muted">Ensuite : {program.exercises[active.log.exercises[upcoming.ex].exerciseId].name}</span>}
       </div>
     </main>
   )
@@ -299,20 +360,53 @@ function ExerciseStep({ program, history, photos, active, step, now, act }: Step
 
 function RatingChips({ value, onPick }: { value: number | null; onPick: (n: number) => void }) {
   return (
-    <div className="rating" role="group" aria-label="Difficulté ressentie, de 1 (facile) à 5 (très dur)">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} className={value === n ? 'on' : undefined} aria-pressed={value === n} onClick={() => onPick(n)}>
-          {n}
-        </button>
-      ))}
+    <div className="rating" role="group" aria-label="Difficulté ressentie">
+      {RATING_LABELS.map((label, i) => {
+        const n = i + 1
+        return (
+          <button key={n} className={value === n ? 'on' : undefined} aria-pressed={value === n} aria-label={`${n} : ${label}`} onClick={() => onPick(n)}>
+            <strong>{n}</strong>
+            <span>{label}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }
 
-function RestStep({ program, history, active, step, now, act }: StepProps<'rest'>) {
+/** Pendant le repos : correction du résultat de l'exercice qui vient d'être fait. */
+function DoneEditor({ program, active, act }: { program: Program; active: ActiveSession; act: Update }) {
+  const done = justDone(active)
+  if (!done) return null
+  const ex = active.log.exercises[done.ex]
+  const exercise = program.exercises[ex.exerciseId]
+  const result = ex.results[done.set]
+  if (!result) return null
+  const timed = (ex.target.seconds ?? 0) > 0
+  const set = (r: SetResult) => act((a) => correctResult(a, done.ex, done.set, r, Date.now()))
+  return (
+    <section className="done-box">
+      <p className="done-title">
+        <span className="block-title">{exercise.name} : tu as fait</span>
+        <span className="muted">objectif {formatTarget(exercise.kind, ex.target)}</span>
+      </p>
+      <ResultEditor
+        size="medium"
+        value={result.value}
+        load={result.loadKg}
+        unit={unitLabel(exercise.kind, timed)}
+        onValue={(value) => set(withLoad(value, result.loadKg))}
+        onLoad={(loadKg) => set(withLoad(result.value, loadKg || undefined))}
+      />
+    </section>
+  )
+}
+
+function RestStep({ program, history, photos, active, step, now, act }: StepProps<'rest'> & { photos: Record<string, Photo> }) {
   const timer = active.timer
   const upcoming = upcomingExercise(active)
   const upEx = upcoming ? active.log.exercises[upcoming.ex] : null
+  const upExercise = upEx ? program.exercises[upEx.exerciseId] : null
   const timed = (upEx?.target.seconds ?? 0) > 0
   const last = upEx ? lastLine(history, upEx.exerciseId, active.log.startedAt, timed) : null
 
@@ -322,37 +416,44 @@ function RestStep({ program, history, active, step, now, act }: StepProps<'rest'
         <span>{step.label}</span>
         <span>{formatDuration(step.seconds)}</span>
       </div>
-      {timer && (
-        <Ring remaining={remainingMs(timer, now)} total={timer.endsAt - timer.startedAt} tone="rest">
-          <p className="ring-num">{formatClock(Math.ceil(remainingMs(timer, now) / 1000))}</p>
-          <p className="ring-label">repos</p>
-        </Ring>
-      )}
-      <div className="adjust">
-        <button onClick={() => act((a) => adjustRest(a, -10, Date.now()))}>−10 s</button>
-        <button onClick={() => act((a) => adjustRest(a, 10, Date.now()))}>+10 s</button>
-        <button onClick={() => act((a) => next(a, Date.now()))}>Passer</button>
+      <div className="rest-top">
+        {timer && (
+          <Ring remaining={remainingMs(timer, now)} total={timer.endsAt - timer.startedAt} tone="rest" small>
+            <p className="ring-num">{formatClock(Math.ceil(remainingMs(timer, now) / 1000))}</p>
+            <p className="ring-label">repos</p>
+          </Ring>
+        )}
+        <div className="adjust vertical">
+          <button onClick={() => act((a) => adjustRest(a, 10, Date.now()))}>+10 s</button>
+          <button onClick={() => act((a) => adjustRest(a, -10, Date.now()))}>−10 s</button>
+          <button onClick={() => act((a) => next(a, Date.now()))}>Passer</button>
+        </div>
       </div>
+      <DoneEditor program={program} active={active} act={act} />
       {step.rating && (
         <div className="rate-box">
-          <p className="small">Comment était ce tour ?</p>
+          <p className="block-title">Comment était ce tour ?</p>
           <RatingChips
             value={ratingOf(active.log, step.rating.circuitId, step.rating.round)}
             onPick={(n) => act((a) => rateRound(a, step.rating!.circuitId, step.rating!.round, n, Date.now()))}
           />
         </div>
       )}
-      {upcoming && upEx && (
+      {upcoming && upEx && upExercise && (
         <div className="up-next">
-          <p className="kicker plain">Ensuite</p>
-          <p className="block-title">{program.exercises[upEx.exerciseId].name}</p>
-          <p className="muted small">
-            {formatTarget(program.exercises[upEx.exerciseId].kind, upEx.target)} · {upcoming.position}
-          </p>
-          {last && <p className="muted small">{last}</p>}
+          <div className="up-next-text">
+            <p className="kicker plain">Ensuite</p>
+            <p className="block-title">{upExercise.name}</p>
+            <p className="muted">
+              {formatTarget(upExercise.kind, upEx.target)} · {upcoming.position}
+            </p>
+            {last && <p className="muted">{last}</p>}
+          </div>
+          <div className="up-next-image">
+            <Illustration exercise={upExercise} photo={photos[upExercise.id]} compact />
+          </div>
         </div>
       )}
-      <p className="center muted small">Bip sonore sur les 3 dernières secondes</p>
     </main>
   )
 }
@@ -364,7 +465,6 @@ function RatingStep({ active, step, act }: Omit<StepProps<'rating'>, 'program' |
         <span>{step.label}</span>
       </div>
       <h1>Comment était ce tour ?</h1>
-      <p className="muted">1 = facile · 5 = très dur</p>
       <RatingChips value={ratingOf(active.log, step.circuitId, step.round)} onPick={(n) => act((a) => rateRound(a, step.circuitId, step.round, n, Date.now()))} />
       <button className="cta bottom" onClick={() => act((a) => next(a, Date.now()))}>
         Continuer
@@ -394,7 +494,7 @@ function FinishStep({ program, active, onSave }: { program: Program; active: Act
           <span className="muted small">séries faites</span>
         </div>
         <div>
-          <strong>{avg ? `${avg}/5` : '–'}</strong>
+          <strong>{avg ? ratingLabel(avg) : '–'}</strong>
           <span className="muted small">ressenti moyen</span>
         </div>
       </div>
@@ -418,12 +518,12 @@ function FinishStep({ program, active, onSave }: { program: Program; active: Act
 }
 
 /** Anneau qui se vide avec le temps restant. */
-function Ring({ remaining, total, tone, children }: { remaining: number; total: number; tone: 'rest' | 'accent' | 'muted'; children: React.ReactNode }) {
+function Ring({ remaining, total, tone, small, children }: { remaining: number; total: number; tone: 'rest' | 'accent' | 'muted'; small?: boolean; children: React.ReactNode }) {
   const r = 86
   const c = 2 * Math.PI * r
   const ratio = total > 0 ? Math.max(0, Math.min(1, remaining / total)) : 0
   return (
-    <div className="ring-timer">
+    <div className={small ? 'ring-timer small' : 'ring-timer'}>
       <svg viewBox="0 0 200 200" aria-hidden="true">
         <circle className="ring-bg" cx="100" cy="100" r={r} />
         <circle className={`ring-fg ${tone}`} cx="100" cy="100" r={r} strokeDasharray={`${c * ratio} ${c}`} transform="rotate(-90 100 100)" />

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BODY_METRICS, type BodyEntry } from '../domain/body'
-import type { WorkoutLog } from '../domain/log'
+import { ratingLabel, type WorkoutLog } from '../domain/log'
 import { calendarGrid, monthlyReport, monthRange } from '../domain/report'
 import { progressPoints } from '../domain/stats'
 import type { Program } from '../domain/types'
@@ -127,7 +127,7 @@ export function MonthlyReportView({ program, history, body, open }: { program: P
             <span className="muted small">séries</span>
           </div>
           <div>
-            <strong>{report.rating ? `${report.rating}/5` : '–'}</strong>
+            <strong>{report.rating ? ratingLabel(report.rating) : '–'}</strong>
             <span className="muted small">ressenti</span>
           </div>
         </div>
