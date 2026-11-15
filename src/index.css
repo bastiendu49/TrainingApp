@@ -1477,3 +1477,60 @@ h2 {
 .adjust.vertical button {
   min-height: 50px;
 }
+
+/* ---------- retours de la deuxième séance ---------- */
+
+.all-next {
+  display: grid;
+  gap: 6px;
+}
+
+.next-list {
+  display: grid;
+  margin: 0;
+  padding: 4px 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  list-style: none;
+}
+
+.next-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.next-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.next-list li > span:first-child {
+  display: grid;
+  min-width: 0;
+}
+
+.next-name {
+  font-weight: 600;
+}
+
+.rest-quick summary {
+  display: grid;
+  gap: 2px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rest-quick summary::-webkit-details-marker {
+  display: none;
+}
+
+.rest-quick[open] summary {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rest-quick-circuit {
+  display: grid;
+}

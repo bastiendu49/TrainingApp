@@ -232,3 +232,16 @@ Chaque étape donne une version utilisable sur le téléphone. Étapes 0 et 1 su
 - **Pendant le repos**, l'image du prochain exercice est en bas à droite. L'écran est compacté (boutons de repos à droite de l'anneau) pour que tout tienne sans défiler.
 - **Texte de la séance agrandi** (infos secondaires à 16 px et plus).
 - **Ressenti en mots** : 1 Très facile · 2 Facile · 3 Moyen · 4 Dur · 5 Très dur, aussi dans l'historique et le bilan.
+
+## Retours après la deuxième séance (15 novembre 2026)
+- **Métronome audible** : tic plus grave et plus long, à 60 % du volume. Il reste moins fort que les bips de fin (100 %). Il s'applique à tous les exercices en durée, équilibre compris.
+- **Préparation de 2 min** entre l'échauffement et la première série, avec le même écran qu'un repos : bips de fin, ±10 s, Passer, et le premier exercice annoncé.
+  - Le chrono d'un premier exercice en durée part directement à la fin de la préparation.
+  - La durée se règle dans Plus › Modifier le programme › Échauffements (0 = pas de préparation).
+- **« Voir la suite »** pendant les repos : la liste dépliable de tous les exercices restants jusqu'à la fin de la séance.
+- **Temps de repos réglables depuis l'accueil**, pour la séance sélectionnée (entre exercices, entre tours), juste sous les propositions de progression.
+- **Sauvegarde** :
+  - quand la protection d'accès du site Netlify (« Visitor access ») bloque la demande, l'app le dit au lieu d'afficher « Code secret incorrect » ;
+  - le code secret peut s'afficher pendant la saisie ;
+  - pas de majuscule ni de correction automatique sur le code.
+  - Le site doit être **public** : c'est le code secret qui protège les données.

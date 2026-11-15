@@ -92,6 +92,8 @@ export interface Program {
   version: 1
   /** Dernière modification (ms) : la copie la plus récente gagne lors de la synchro. */
   updatedAt?: number
+  /** Préparation entre l'échauffement et la première série, en secondes (2 min si absent). */
+  prepSeconds?: number
   exercises: Record<string, Exercise>
   warmups: Warmup[]
   skills: Skill[]

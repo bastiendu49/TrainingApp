@@ -227,6 +227,17 @@ export function ProgramEditor({ program, change, onBack }: { program: Program; c
       ))}
 
       <h2>Échauffements</h2>
+      <section className="panel">
+        <Stepper
+          label="Préparation après l’échauffement"
+          value={program.prepSeconds ?? 120}
+          step={15}
+          min={0}
+          max={600}
+          format={formatDuration}
+          onChange={(prepSeconds) => change((p) => ({ ...p, prepSeconds }))}
+        />
+      </section>
       {program.warmups.map((w) => (
         <details key={w.id} className="panel editor">
           <summary>

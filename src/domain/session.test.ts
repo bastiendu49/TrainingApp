@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ratingLabel, type WorkoutLog } from './log'
-import { INITIAL_PROGRAM as P } from './program'
+import { INITIAL_PROGRAM } from './program'
 import {
   adjustRest,
   correctResult,
@@ -11,6 +11,7 @@ import {
   next,
   PREP_SECONDS,
   progress,
+  remainingExercises,
   rateRound,
   ratingOf,
   recordAndNext,
@@ -20,10 +21,14 @@ import {
   suggestedValue,
   toggleWarmupItem,
   upcomingExercise,
+  DEFAULT_WARMUP_PREP,
   type Step,
 } from './session'
 
 const T0 = 1_000_000
+
+// Tests de structure sans la préparation d'après l'échauffement (testée à part plus bas).
+const P = { ...INITIAL_PROGRAM, prepSeconds: 0 }
 
 const kinds = (steps: Step[]) => steps.map((s) => s.kind)
 
@@ -211,5 +216,29 @@ describe('ressenti en mots', () => {
     expect(ratingLabel(1)).toBe('Très facile')
     expect(ratingLabel(3)).toBe('Moyen')
     expect(ratingLabel(5)).toBe('Très dur')
+  })
+})
+
+describe('préparation après l’échauffement', () => {
+  it('ajoute 2 min de préparation par défaut, puis le chrono part tout de suite', () => {
+    const a = startSession(INITIAL_PROGRAM, 'epaules', T0)
+    expect(a.steps[1]).toEqual({ kind: 'rest', seconds: DEFAULT_WARMUP_PREP, label: 'Préparation' })
+    expect(DEFAULT_WARMUP_PREP).toBe(120)
+    // Première série d'équilibre juste après la préparation : chrono direct, sans 5 s de mise en place.
+    expect(enterStep(a, 2, T0).timer).toEqual({ kind: 'work', startedAt: T0, endsAt: T0 + 30_000 })
+  })
+
+  it('respecte la durée choisie, et la supprime à 0', () => {
+    expect(startSession({ ...INITIAL_PROGRAM, prepSeconds: 90 }, 'push', T0).steps[1]).toMatchObject({ seconds: 90 })
+    expect(startSession({ ...INITIAL_PROGRAM, prepSeconds: 0 }, 'push', T0).steps[1].kind).toBe('exercise')
+  })
+})
+
+describe('voir la suite pendant le repos', () => {
+  it('liste tous les exercices restants jusqu’à la fin', () => {
+    const a = enterStep(startSession(P, 'push', T0), 2, T0) // repos après la série 1
+    const rest = remainingExercises(a)
+    expect(rest).toHaveLength(25) // 7 séries de technique + 18 exercices de circuit
+    expect(rest.at(-1)).toMatchObject({ position: 'Tour 3/3 · exercice 6/6' })
   })
 })

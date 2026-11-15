@@ -12,7 +12,14 @@ async function call(code: string, init?: RequestInit): Promise<unknown> {
   } catch {
     throw new Error('Pas de connexion : la sauvegarde se fera au retour du réseau.')
   }
-  if (res.status === 401) throw new Error('Code secret incorrect.')
+  if (res.status === 401) {
+    // Notre fonction répond en JSON ; une page HTML vient de la protection d'accès du site Netlify,
+    // qui bloque la demande avant la fonction (le code n'a même pas été vérifié).
+    if (!(res.headers.get('content-type') ?? '').includes('application/json')) {
+      throw new Error('Accès bloqué par la protection du site Netlify (Visitor access). Rends le site public dans Netlify : ton code secret protège déjà tes données.')
+    }
+    throw new Error('Code secret incorrect.')
+  }
   if (res.status === 404) throw new Error('Sauvegarde en ligne indisponible sur cette adresse.')
   const body = (await res.json().catch(() => null)) as { error?: string; backup?: unknown } | null
   if (!res.ok) throw new Error(body?.error ?? `Erreur du serveur (${res.status}).`)

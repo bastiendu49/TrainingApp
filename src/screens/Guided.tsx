@@ -14,6 +14,7 @@ import {
   rateRound,
   ratingOf,
   recordAndNext,
+  remainingExercises,
   restFollows,
   startWork,
   suggestedValue,
@@ -404,6 +405,8 @@ function DoneEditor({ program, active, act }: { program: Program; active: Active
 
 function RestStep({ program, history, photos, active, step, now, act }: StepProps<'rest'> & { photos: Record<string, Photo> }) {
   const timer = active.timer
+  const [showAll, setShowAll] = useState(false)
+  const remaining = remainingExercises(active)
   const upcoming = upcomingExercise(active)
   const upEx = upcoming ? active.log.exercises[upcoming.ex] : null
   const upExercise = upEx ? program.exercises[upEx.exerciseId] : null
@@ -453,6 +456,32 @@ function RestStep({ program, history, photos, active, step, now, act }: StepProp
             <Illustration exercise={upExercise} photo={photos[upExercise.id]} compact />
           </div>
         </div>
+      )}
+      {remaining.length > 1 && (
+        <section className="all-next">
+          <button className="text-btn left" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}>
+            {showAll ? 'Masquer la suite' : `Voir la suite (${remaining.length - 1} exercices après)`}
+          </button>
+          {showAll && (
+            <ol className="next-list">
+              {remaining.slice(1).map((s) => {
+                const e = active.log.exercises[s.ex]
+                const exo = program.exercises[e.exerciseId]
+                return (
+                  <li key={`${s.ex}-${s.set}`}>
+                    <span>
+                      <span className="next-name">{exo?.name ?? e.exerciseId}</span>
+                      <span className="muted">
+                        {s.title} · {s.position}
+                      </span>
+                    </span>
+                    <span className="target">{exo ? formatTarget(exo.kind, e.target) : ''}</span>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </section>
       )}
     </main>
   )

@@ -43,8 +43,11 @@ function tone(frequency: number, seconds: number, level: number, type: Oscillato
   }
 }
 
-/** Tic du métronome (chaque seconde d'un exercice en durée) : discret. */
-export const metronomeTick = () => tone(1600, 0.04, 0.22, 'sine')
+/**
+ * Tic du métronome (chaque seconde d'un exercice en durée) : bien audible sur un haut-parleur de
+ * téléphone, mais plus court et moins fort que les bips de fin (60 % du volume, contre 100 %).
+ */
+export const metronomeTick = () => tone(1200, 0.06, 0.6, 'square')
 
 /**
  * Bips de fin de compte à rebours, au volume maximum : un son différent pour chacune des
@@ -65,8 +68,8 @@ export function go(): void {
 /** Aperçu des sons pour régler le volume : 2 tics, la fin du compte à rebours, puis le départ. */
 export function testSound(): void {
   unlockAudio()
-  tone(1600, 0.04, 0.22, 'sine', 0)
-  tone(1600, 0.04, 0.22, 'sine', 0.5)
+  tone(1200, 0.06, 0.6, 'square', 0)
+  tone(1200, 0.06, 0.6, 'square', 0.5)
   tone(659, 0.18, 1, 'square', 1)
   tone(784, 0.18, 1, 'square', 1.5)
   tone(880, 0.18, 1, 'square', 2)

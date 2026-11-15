@@ -23,6 +23,7 @@ const time = (ms: number) =>
 
 export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow, onImport, onEditProgram, sound, onSound }: Props) {
   const [draft, setDraft] = useState('')
+  const [showCode, setShowCode] = useState(false)
   const [checking, setChecking] = useState(false)
   const [codeError, setCodeError] = useState<string | null>(null)
   const [fileMessage, setFileMessage] = useState<string | null>(null)
@@ -94,7 +95,7 @@ export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow,
         </label>
         <label className="toggle">
           <input type="checkbox" checked={sound.metronome} onChange={(e) => onSound({ ...sound, metronome: e.target.checked })} />
-          <span>Métronome pendant les exercices en durée (tic discret chaque seconde)</span>
+          <span>Métronome pendant les exercices en durée (un tic chaque seconde, moins fort que les bips de fin)</span>
         </label>
         <p className="muted small">Sur Android, c’est le volume multimédia du téléphone qui s’applique. Les 5 dernières secondes d’un exercice en durée sont annoncées par 5 bips différents.</p>
         <button className="secondary" onClick={testSound}>
@@ -133,8 +134,19 @@ export function Settings({ data, code, lastSyncAt, status, onSetCode, onSyncNow,
             </p>
             <label className="field">
               <span>Code secret</span>
-              <input type="password" autoComplete="off" value={draft} onChange={(e) => setDraft(e.target.value)} />
+              <input
+                type={showCode ? 'text' : 'password'}
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+              />
             </label>
+            <button className="text-btn left" onClick={() => setShowCode((v) => !v)}>
+              {showCode ? 'Masquer le code' : 'Afficher le code'}
+            </button>
             {codeError && <p className="error-text">{codeError}</p>}
             <button className="cta" onClick={activate} disabled={!draft.trim() || checking}>
               {checking ? 'Vérification…' : 'Activer la sauvegarde'}

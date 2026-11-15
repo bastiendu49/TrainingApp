@@ -35,6 +35,9 @@ export interface ActiveSession {
 /** Préparation avant un exercice en durée qui ne suit pas un repos. */
 export const PREP_SECONDS = 5
 
+/** Temps pour se mettre en place entre l'échauffement et la première série, par défaut. */
+export const DEFAULT_WARMUP_PREP = 120
+
 let counter = 0
 const newId = () => `${Date.now().toString(36)}-${(counter++).toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 
@@ -45,6 +48,8 @@ export function startSession(program: Program, sessionId: string, now: number): 
 
   const exercises: ExerciseLog[] = []
   const steps: Step[] = [{ kind: 'warmup' }]
+  const prep = program.prepSeconds ?? DEFAULT_WARMUP_PREP
+  if (prep > 0) steps.push({ kind: 'rest', seconds: prep, label: 'Préparation' })
 
   const skill = program.skills.find((s) => s.id === session.skillId)
   const level = skill?.levels[skill.currentLevel]
@@ -252,4 +257,9 @@ export function correctResult(active: ActiveSession, ex: number, set: number, re
     return { ...e, results }
   })
   return { ...active, log: { ...active.log, exercises, updatedAt: now } }
+}
+
+/** Tous les exercices restants après l'étape en cours, jusqu'à la fin de la séance. */
+export function remainingExercises(active: ActiveSession): Extract<Step, { kind: 'exercise' }>[] {
+  return active.steps.slice(active.index + 1).filter((s) => s.kind === 'exercise')
 }

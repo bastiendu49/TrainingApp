@@ -135,6 +135,9 @@ export default function App() {
           unlockAudio()
           setGuided(true)
         }}
+        onSetRest={(circuitId, key, seconds) =>
+          app.updateProgram((p) => ({ ...p, circuits: p.circuits.map((c) => (c.id === circuitId ? { ...c, [key]: seconds } : c)) }))
+        }
         suggestions={
           <Suggestions
             program={program}

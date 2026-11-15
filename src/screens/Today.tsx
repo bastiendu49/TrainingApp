@@ -17,10 +17,30 @@ type Props = {
   onResume: () => void
   /** Propositions de progression, affichées sous la semaine. */
   suggestions?: React.ReactNode
+  /** Modifie un temps de repos d'un circuit (enregistré dans le programme). */
+  onSetRest: (circuitId: string, key: 'restBetweenExercises' | 'restBetweenRounds', seconds: number) => void
+}
+
+/** Petit réglage − valeur + d'un temps de repos. */
+function RestStepper({ label, value, step, onChange }: { label: string; value: number; step: number; onChange: (v: number) => void }) {
+  return (
+    <div className="stepper-row">
+      <span>{label}</span>
+      <div className="mini-stepper">
+        <button aria-label={`${label} : moins`} onClick={() => onChange(Math.max(0, value - step))} disabled={value <= 0}>
+          −
+        </button>
+        <strong>{formatDuration(value)}</strong>
+        <button aria-label={`${label} : plus`} onClick={() => onChange(Math.min(900, value + step))}>
+          +
+        </button>
+      </div>
+    </div>
+  )
 }
 
 /** Accueil : la séance proposée aujourd'hui, ses trois parties et le bouton pour la lancer. */
-export function Today({ program, history, active, onOpenSession, onStart, onResume, suggestions }: Props) {
+export function Today({ program, history, active, onOpenSession, onStart, onResume, suggestions, onSetRest }: Props) {
   const [now] = useState(() => new Date())
   const sorted = sortedHistory(history)
   const suggested = nextSession(program.sessions, sorted[0]?.sessionId)
@@ -122,6 +142,22 @@ export function Today({ program, history, active, onOpenSession, onStart, onResu
       )}
 
       {suggestions}
+
+      <details className="panel rest-quick">
+        <summary>
+          <span className="block-title">Temps de repos · {session.name}</span>
+          <span className="muted small">
+            {circuits.map((c) => `${formatDuration(c.restBetweenExercises)} entre exercices`).join(' · ')}
+          </span>
+        </summary>
+        {circuits.map((c) => (
+          <div key={c.id} className="rest-quick-circuit">
+            {circuits.length > 1 && <p className="kicker circ-t">{c.name}</p>}
+            <RestStepper label="Entre exercices" value={c.restBetweenExercises} step={5} onChange={(v) => onSetRest(c.id, 'restBetweenExercises', v)} />
+            <RestStepper label="Entre tours" value={c.restBetweenRounds} step={15} onChange={(v) => onSetRest(c.id, 'restBetweenRounds', v)} />
+          </div>
+        ))}
+      </details>
 
       <section className="other">
         <p className="kicker plain">Faire une autre séance</p>
